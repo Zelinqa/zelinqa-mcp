@@ -14,12 +14,12 @@ from contextlib import contextmanager
 from typing import Any
 
 from mcp.server.mcpserver.exceptions import ToolError
-from nbq.errors import (
-    NBQAPIError,
-    NBQAuthenticationError,
-    NBQConnectionError,
-)
 from pydantic import ValidationError
+from zelinqa.errors import (
+    ZelinqaAPIError,
+    ZelinqaAuthenticationError,
+    ZelinqaConnectionError,
+)
 
 from ._payloads import scrub_secrets
 
@@ -31,13 +31,13 @@ _MAX_DETAILS_CHARS = 2000
 # from outside, so one message covers them and carries the HTTP status.
 AUTH_HINT = (
     "the NBQ API key is missing, invalid, revoked, expired, or does not carry the "
-    "`runtime` scope (check NBQ_API_KEY)"
+    "`runtime` scope (check ZELINQA_API_KEY)"
 )
 AUTH_MESSAGE = f"unauthorized: {AUTH_HINT}"
-CONFLICT_HINT = "call nbq_get_session then retry"
+CONFLICT_HINT = "call zelinqa_get_session then retry"
 
 
-def auth_message(error: NBQAPIError) -> str:
+def auth_message(error: ZelinqaAPIError) -> str:
     """Readable message for an authentication or gateway authorization refusal."""
 
     status_code = getattr(error, "status_code", None)
@@ -59,7 +59,7 @@ def _compact_details(details: Any) -> str:
     return scrub_secrets(rendered)
 
 
-def _envelope_message(error: NBQAPIError) -> str:
+def _envelope_message(error: ZelinqaAPIError) -> str:
     code = getattr(error, "code", None) or str(getattr(error, "status_code", "error"))
     message = getattr(error, "message", None) or str(error)
     request_id = getattr(error, "request_id", None)
@@ -70,10 +70,10 @@ def _envelope_message(error: NBQAPIError) -> str:
 def tool_error_for(error: Exception) -> ToolError:
     """Build the ``ToolError`` that describes ``error`` to the host."""
 
-    if isinstance(error, NBQAuthenticationError):
+    if isinstance(error, ZelinqaAuthenticationError):
         return ToolError(auth_message(error))
 
-    if isinstance(error, NBQAPIError):
+    if isinstance(error, ZelinqaAPIError):
         parts = [_envelope_message(error)]
         details = _compact_details(getattr(error, "details", None))
         if getattr(error, "code", None) == "state_version_conflict":
@@ -82,7 +82,7 @@ def tool_error_for(error: Exception) -> ToolError:
             parts.append(details)
         return ToolError(" — ".join(parts))
 
-    if isinstance(error, NBQConnectionError):
+    if isinstance(error, ZelinqaConnectionError):
         return ToolError(
             "connection_error: the NBQ API could not be reached after retrying "
             f"({scrub_secrets(str(error)) or type(error).__name__}). "
@@ -103,12 +103,20 @@ def tool_error_for(error: Exception) -> ToolError:
 
 
 @contextmanager
-def translated_errors() -> Iterator[None]:
+def translated_errors(*, business: bool = False) -> Iterator[None]:
     """Re-raise SDK and validation failures as readable tool errors."""
 
     try:
         yield
     except ToolError:
         raise
-    except (NBQAPIError, NBQConnectionError, ValidationError, ValueError) as error:
-        raise tool_error_for(error) from error
+    except (ZelinqaAPIError, ZelinqaConnectionError, ValidationError, ValueError) as error:
+        translated = tool_error_for(error)
+        if business:
+            translated = ToolError(
+                str(translated).replace(
+                    CONFLICT_HINT,
+                    "call zelinqa_status, reconcile the pending question, and do not blindly replay",
+                )
+            )
+        raise translated from error

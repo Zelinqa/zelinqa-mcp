@@ -22,12 +22,12 @@ _REDACTED = "[redacted]"
 #: of every string this module produces, so that a server-side echo or a
 #: misconfigured integration can never leak a key through a tool result.
 _SECRET_ENV_VARS = (
-    "NBQ_API_KEY",
-    "NBQ_LIVE_RUNTIME_KEY",
-    "NBQ_LIVE_CONFIG_READ_KEY",
-    "NBQ_LIVE_CONFIG_WRITE_KEY",
-    "NBQ_LIVE_CONFIG_PUBLISH_KEY",
-    "NBQ_LIVE_REVOKED_KEY",
+    "ZELINQA_API_KEY",
+    "ZELINQA_LIVE_RUNTIME_KEY",
+    "ZELINQA_LIVE_CONFIG_READ_KEY",
+    "ZELINQA_LIVE_CONFIG_WRITE_KEY",
+    "ZELINQA_LIVE_CONFIG_PUBLISH_KEY",
+    "ZELINQA_LIVE_REVOKED_KEY",
 )
 
 

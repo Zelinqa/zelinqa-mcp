@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zelinqa"
+  short_description: "Goal-oriented conversations with Zelinqa SDK and MCP"
+  default_prompt: "Use $zelinqa to integrate a next-question conversation without exposing technical IDs to the model."

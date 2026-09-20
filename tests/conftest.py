@@ -10,15 +10,15 @@ import pytest
 from mcp.client import Client
 from mcp.types import CallToolResult, TextContent
 
-from nbq_mcp.server import build_server
+from zelinqa_mcp.server import build_advanced_server as build_server
 
 from .fakes import FakeRuntimeClient
 
 _KEY_ENV_VARS = (
-    "NBQ_API_KEY",
-    "NBQ_BASE_URL",
-    "NBQ_TIMEOUT_SECONDS",
-    "NBQ_MAX_RETRIES",
+    "ZELINQA_API_KEY",
+    "ZELINQA_BASE_URL",
+    "ZELINQA_TIMEOUT_SECONDS",
+    "ZELINQA_MAX_RETRIES",
 )
 
 

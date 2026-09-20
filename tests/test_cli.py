@@ -8,8 +8,8 @@ import sys
 import pytest
 from mcp.server.mcpserver import MCPServer
 
-from nbq_mcp import __version__
-from nbq_mcp.cli import EXIT_MISSING_API_KEY, build_parser, configure_logging, main
+from zelinqa_mcp import __version__
+from zelinqa_mcp.cli import EXIT_MISSING_API_KEY, build_parser, configure_logging, main
 
 
 def test_defaults() -> None:
@@ -50,36 +50,36 @@ def test_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as raised:
         main(["--version"])
     assert raised.value.code == 0
-    assert capsys.readouterr().out.strip() == f"nbq-mcp {__version__}"
+    assert capsys.readouterr().out.strip() == f"zelinqa-mcp {__version__}"
 
 
 def test_missing_api_key_exits_two_and_writes_to_stderr(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.delenv("NBQ_API_KEY", raising=False)
+    monkeypatch.delenv("ZELINQA_API_KEY", raising=False)
 
     assert main([]) == EXIT_MISSING_API_KEY
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "NBQ_API_KEY is not set" in captured.err
+    assert "ZELINQA_API_KEY is not set" in captured.err
     assert "runtime" in captured.err
 
 
 def test_blank_api_key_is_treated_as_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("NBQ_API_KEY", "   ")
+    monkeypatch.setenv("ZELINQA_API_KEY", "   ")
     assert main([]) == EXIT_MISSING_API_KEY
 
 
-def test_main_serves_the_requested_transport(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("NBQ_API_KEY", "nbq_live_fake_unit_test_key")
+def test_main_refuses_unauthenticated_http(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ZELINQA_API_KEY", "zelinqa_live_fake_unit_test_key")
     served: list[tuple[str, str, int, str]] = []
 
     def fake_run(server: MCPServer[None], transport: str, *, host: str, port: int) -> None:
         # host and port are transport options in the MCP SDK, not server settings.
         served.append((transport, host, port, server.settings.log_level))
 
-    monkeypatch.setattr("nbq_mcp.cli.run_server", fake_run)
+    monkeypatch.setattr("zelinqa_mcp.cli.run_server", fake_run)
 
     exit_code = main(
         [
@@ -94,8 +94,10 @@ def test_main_serves_the_requested_transport(monkeypatch: pytest.MonkeyPatch) ->
         ]
     )
 
-    assert exit_code == 0
-    assert served == [("streamable-http", "127.0.0.1", 9100, "ERROR")]
+    assert exit_code == 2
+    assert served == []
+    assert main([]) == 0
+    assert served == [("stdio", "127.0.0.1", 8000, "WARNING")]
 
 
 def test_logging_is_configured_on_stderr_only() -> None:

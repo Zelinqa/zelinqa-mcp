@@ -1,268 +1,120 @@
-# NBQ MCP Server
+# Zelinqa MCP
 
-Official [Model Context Protocol](https://modelcontextprotocol.io) server for the Zelinqa
-**NBQ** (Next Best Question) API. It gives an LLM host six tools to run a qualification
-conversation: your agent asks the questions, NBQ decides which question is worth asking
-next.
+The official MCP adapter for goal-oriented question selection. The model handles
+the conversation; the SDK handles session IDs, pending decisions and state versions.
+
+**Release candidate: not published yet.** Publication depends on `zelinqa` 1.0.0.
+See [PUBLISHING.md](PUBLISHING.md). Python 3.11+ required.
 
 ```text
-MCP tool  ->  Python SDK `nbq`  ->  public REST API https://api.zelinqa.ai
+MCP host → zelinqa-mcp → Python SDK zelinqa → api.zelinqa.ai
 ```
 
-The server is a protocol adapter and nothing more. It never speaks HTTP itself, never
-imports the NBQ engine, never opens a database, and exposes no selection score.
+## Start
 
-> **Status: not published yet.** `nbq-mcp` is not on PyPI, because the `nbq` SDK 1.0.0 it
-> depends on is not published either. Run it from a checkout for now, as described below.
-> See [`PUBLISHING.md`](PUBLISHING.md).
-
-## Install
-
-Once published, no install step is needed — `uvx` fetches and runs it:
-
-```bash
-uvx nbq-mcp            # not available yet
-```
-
-From a checkout, today:
+After publication: `uvx zelinqa-mcp`. During review:
 
 ```bash
 git clone https://github.com/Zelinqa/nbq-mcp.git
 cd nbq-mcp
-uv sync --group dev
-uv run nbq-mcp --version
+uv sync --group dev --locked
+uv run zelinqa-mcp --version
 ```
 
-Requires Python 3.11 or newer.
+Configure `ZELINQA_API_KEY` in the host's secret environment (runtime scope).
+Never paste keys into a chat, repository or report. Host examples are in
+[examples/](examples); replace local checkout paths where necessary.
 
-## Configuration
+| Environment variable | Purpose |
+|---|---|
+| `ZELINQA_API_KEY` | Required runtime key, scoped to one NBQ |
+| `ZELINQA_BASE_URL` | Default `https://api.zelinqa.ai` |
+| `ZELINQA_TIMEOUT_SECONDS` | Per-attempt timeout, default 30 seconds |
+| `ZELINQA_MAX_RETRIES` | Retry count, default 2 |
+| `ZELINQA_SESSION_ID` | Optional host-owned session to resume after restart |
+| `ZELINQA_CONVERSATION` | Local name of that resumed session; default `conversation` |
 
-Everything comes from the server process environment.
+The supported transport is **stdio**, one isolated process per trusted host/user.
+HTTP hosting is disabled pending authentication and session isolation. Logs use stderr;
+stdout is reserved for MCP. Do not share one process across untrusted users.
 
-| Variable | Required | Default | Meaning |
-|---|---|---|---|
-| `NBQ_API_KEY` | **yes** | — | NBQ API key carrying the `runtime` scope. The server refuses to start without it (exit code `2`). |
-| `NBQ_BASE_URL` | no | `https://api.zelinqa.ai` | Alternate API base URL. |
-| `NBQ_TIMEOUT_SECONDS` | no | SDK default (30) | Per-attempt HTTP timeout. |
-| `NBQ_MAX_RETRIES` | no | SDK default (2) | Retries on connection errors, 429 and 5xx. |
+## Business tools (default)
 
-Command line:
+| Tool | What it does |
+|---|---|
+| `zelinqa_start` | Create a named conversation, or recover its local handle |
+| `zelinqa_next_question` | Get the first question, or redisplay the pending one without a new turn |
+| `zelinqa_answer` | Report actual text/choice labels and receive the next questions |
+| `zelinqa_add_context` | Add a context summary without asking a question |
+| `zelinqa_status` | Refresh progress and the pending question |
+| `zelinqa_feedback` | Record an observed business result: success, partial or failure |
+| `zelinqa_forget` | Free the local handle; does **not** delete API data |
 
-```text
-nbq-mcp [--transport stdio|streamable-http] [--host HOST] [--port PORT]
-        [--log-level DEBUG|INFO|WARNING|ERROR|CRITICAL] [--version]
-```
-
-`stdio` is the default and the transport every desktop host uses. Logs always go to
-stderr, never to stdout, which carries the MCP protocol itself.
-
-## Host setup
-
-Ready-to-copy files live in [`examples/`](examples).
-
-### Claude Code
-
-```bash
-claude mcp add nbq --env NBQ_API_KEY=$NBQ_API_KEY -- uvx nbq-mcp
-```
-
-Or commit a project-scoped [`.mcp.json`](examples/claude-code.mcp.json):
+Example tool sequence:
 
 ```json
-{
-  "mcpServers": {
-    "nbq": {
-      "command": "uvx",
-      "args": ["nbq-mcp"],
-      "env": { "NBQ_API_KEY": "${NBQ_API_KEY}" }
-    }
-  }
-}
+{"tool":"zelinqa_start","arguments":{"conversation":"demo-42"}}
+{"tool":"zelinqa_next_question","arguments":{"conversation":"demo-42"}}
+{"tool":"zelinqa_answer","arguments":{"conversation":"demo-42","user_text":"For my living room"}}
 ```
 
-`${NBQ_API_KEY}` is expanded by Claude Code from your shell environment, so the file holds
-no secret and can be committed.
+For a displayed choice use `choice_labels: ["Contemporary"]`. Use `candidate_rank`
+when asking a candidate other than rank 1. IDs and state versions are not tool inputs.
+Never invent a successful outcome: `asked_answered` is a trusted declaration.
+Unlisted answers can be submitted as `user_text` for language-model analysis.
 
-### Claude Desktop
+Results include question text, ranks, choice labels, objective progress and counters.
+Next-decision results also include warnings, stop reason and degraded-mode reasons.
+The full target/ID maps are deliberately absent. A turn-limit warning is **not**
+proof of objective completion.
 
-Add the contents of [`examples/claude-desktop.json`](examples/claude-desktop.json) to
-`claude_desktop_config.json`, replacing the placeholder with your key: Claude Desktop does
-not expand environment variables. Then restart the app.
+## State, retries and memory
 
-### Codex CLI
+- The registry holds at most **128 conversations**. It never silently evicts one;
+  use `forget` when finished. It stores current state, not a conversation transcript.
+- Calls mutating the same conversation must be sequential. A simultaneous call is
+  rejected, not queued with a stale answer. Different conversations stay separate.
+- The SDK reuses one idempotency key across retries of a single HTTP mutation.
+  Repeating a tool call manually is a new operation, not an automatic replay.
+- On a conflict or interrupted request, call `zelinqa_status` and reconcile with
+  the pending question before answering again. Errors are not hidden.
+- Names are process-local. For restart persistence the host must retain the API
+  session ID and inject the resume variables above outside the model.
 
-Add the block from [`examples/codex-config.toml`](examples/codex-config.toml) to
-`~/.codex/config.toml`:
+`zelinqa-mcp --advanced` exposes the six low-level tools instead: `create_session`,
+`resume_session`, `next`, `apply_events`, `get_session`, `submit_feedback` (all prefixed
+`zelinqa_`). This mode intentionally exposes API identifiers and full state. Configuration
+management is not a MCP tool: use the SDK's separate configuration client/scopes.
 
-```toml
-[mcp_servers.nbq]
-command = "uvx"
-args = ["nbq-mcp"]
-# Codex asks before every MCP tool call unless the server approves its tools;
-# in `codex exec` (non-interactive) an unapproved call is auto-rejected as
-# "user cancelled MCP tool call". The six NBQ tools only act on your own NBQ.
-default_tools_approval_mode = "approve"
-env = { NBQ_API_KEY = "PASTE_YOUR_RUNTIME_KEY_HERE" }
-```
+## Prompts, resource and skill
 
-### Cursor
+| Item | Purpose |
+|---|---|
+| Resource `zelinqa://guide` | Conversation protocol and error handling |
+| Prompt `zelinqa_conversation` | User-selected guidance for a conversation |
+| Prompt `zelinqa_integration_check` | User-selected integration test checklist |
+| [Skill `zelinqa`](skills/zelinqa/SKILL.md) | Portable agent guidance for SDK/MCP integration |
 
-Add [`examples/cursor.mcp.json`](examples/cursor.mcp.json) as `.cursor/mcp.json` in the
-project, or as `~/.cursor/mcp.json` globally.
+Reading these does not call the Zelinqa API or start a conversation. Copy the
+`skills/zelinqa` directory into your host's supported skills directory. No installation
+or credentials are granted by the skill itself.
 
-### Running from a checkout
-
-Before the package is on PyPI, point the host at your clone with
-[`examples/local-dev.mcp.json`](examples/local-dev.mcp.json) (or
-[`examples/local-dev-codex-config.toml`](examples/local-dev-codex-config.toml)):
-
-```json
-{
-  "mcpServers": {
-    "nbq": {
-      "command": "uv",
-      "args": ["run", "--directory", "/absolute/path/to/nbq-mcp", "nbq-mcp"],
-      "env": { "NBQ_API_KEY": "${NBQ_API_KEY}" }
-    }
-  }
-}
-```
-
-## The six tools
-
-| Tool | API route | What it does |
-|---|---|---|
-| `nbq_create_session` | `POST /v1/sessions` | Start a session for one conversation. Returns the initial state; no question yet. |
-| `nbq_resume_session` | `GET /v1/sessions/{id}` | Pick an existing session back up and re-learn its `state_version` and pending candidates. |
-| `nbq_next` | `POST /v1/sessions/{id}/next` | Understand the previous turn, then return the ranked next questions. |
-| `nbq_apply_events` | `POST /v1/sessions/{id}/events` | Apply context or known data without selecting a question and without consuming a turn. |
-| `nbq_get_session` | `GET /v1/sessions/{id}` | Read the public session state. |
-| `nbq_submit_feedback` | `POST /v1/sessions/{id}/feedback` | Declare what the conversation really produced. |
-
-Configuration routes are deliberately absent: this server carries the runtime surface
-only, so a host needs nothing beyond a `runtime` key.
-
-### The turn protocol
-
-1. `nbq_create_session` once per conversation.
-2. `nbq_next` **with no `previous_turn`** for the first turn. Ask the candidate of rank 1,
-   in your own words if you prefer.
-3. `nbq_next` again, passing what actually happened:
-
-   ```json
-   {
-     "session_id": "ses_01J8Z",
-     "previous_turn": {
-       "assistant_text": "And what budget did you have in mind?",
-       "user_text": "Around 2000 euros, 2500 at most."
-     }
-   }
-   ```
-
-   `decision_id`, `question_id` and `outcome` are optional helpers, not identifiers to
-   invent: NBQ resolves the candidate you used from the pending decision and your text.
-   For a choice question, send `structured_answer: {"choice_ids": ["choice_1m"]}` with ids
-   copied from the candidate's `choices` — that path is deterministic and costs no LLM
-   call. Omitting `user_text` is allowed when a structured answer or `client_updates`
-   already carry the information; the turn is then understood in reduced mode, reported in
-   `degraded_reasons`.
-4. Repeat. **You decide when to stop.** NBQ keeps proposing the best available question and
-   reports the situation in `warnings`: `max_turns_reached` (soft limit reached),
-   `objective_achieved` (success conditions met), `eligibility_exhausted_fallback`,
-   `constraints_relaxed`. An `action: "stop"` with `stop_reason: "no_question_available"`
-   is the only hard stop: there is genuinely no question left.
-5. `nbq_submit_feedback` once the real outcome is known.
-
-Every result is structured JSON carrying the contract fields — `candidates` with
-`rank` / `question_id` / `text` / `type` / `choices` / `target_ids`, `progress`,
-`turn_count`, `turns_remaining`, `warnings`, `degraded`, `degraded_reasons`, `request_id`.
-Nothing is filtered out.
-
-### `state_version`, without hidden conflicts
-
-Every mutation is guarded by optimistic concurrency. The server keeps the last
-`state_version` it saw for each session, so you can omit `state_version` and it sends the
-tracked one; if it has never seen the session, it reads it first. Passing `state_version`
-explicitly always wins.
-
-A conflict is never resolved silently. When the API rejects the version you get a readable
-error naming `supplied_state_version`, `current_state_version` and the instruction *call
-nbq_get_session then retry*, and the stale value is dropped rather than replayed.
-
-Each mutating tool call is one logical mutation: the SDK generates its `Idempotency-Key`
-and reuses it across its own retries, so a transient network failure never doubles a turn.
-Calling the same tool twice on purpose is two mutations, not a replay.
-
-## Error semantics
-
-Failures come back as MCP tool errors whose text is meant to be actionable:
-
-```text
-state_version_conflict: The session changed since your last read. (request_id=req_9003)
-  — call nbq_get_session then retry
-  — {"current_state_version":8,"supplied_state_version":7}
-```
-
-- Business errors keep their contract envelope: `<code>: <message> (request_id=<id>)`,
-  followed by the relevant `details` as compact JSON — `required_scopes` /
-  `granted_scopes`, `supplied_state_version` / `current_state_version`,
-  `invalid_choice_ids`, `candidate_question_ids`, and so on.
-- An authentication or gateway authorization refusal becomes:
-
-  ```text
-  unauthorized (HTTP 403): the NBQ API key is missing, invalid, revoked, expired,
-  or does not carry the `runtime` scope (check NBQ_API_KEY)
-  ```
-
-  The deployed gateway answers an envelope-less `403` for an invalid, revoked or wrongly
-  scoped key, so those cases are genuinely indistinguishable from outside: the message
-  names every possibility instead of guessing one. A missing `Authorization` header is the
-  same message with `HTTP 401`.
-- A network failure after the SDK's retries becomes a readable `connection_error`.
-- Arguments that cannot satisfy the contract are rejected before any network call, with the
-  offending field named.
-
-## Security
-
-- The API key is read from `NBQ_API_KEY` in the server process only. It never appears in a
-  log line, a tool result, an error message or a stack trace; any configured key found in an
-  outgoing string is replaced by `[redacted]`.
-- Use a key that carries the `runtime` scope only.
-- On stdio, stdout is the protocol channel: every log record goes to stderr, and no request
-  body or conversation content is logged.
-- See [`SECURITY.md`](SECURITY.md) to report a vulnerability.
-
-## Development
+## Tests
 
 ```bash
-uv sync --group dev
 uv run ruff check src tests
 uv run ruff format --check src tests
 uv run mypy src
-uv run pytest            # the live suite is excluded by default
+uv run pytest
+uv build
+uv run twine check dist/*
 ```
 
-The unit suite runs the real server in process through the MCP in-memory transport, against
-a fake async SDK client returning the payloads of the V1 contract examples. No network.
+CI runs functional tests over the in-memory MCP transport with a fake SDK, plus
+lint, types and packaging. Live tests are separate and opt-in: `ZELINQA_LIVE=1`
+with `ZELINQA_LIVE_RUNTIME_KEY`, then `uv run pytest -m live tests/live`.
+Optional revoked/read-only keys exercise authorization failures. Use a dedicated
+synthetic NBQ: the live tests create sessions and feedback. Unit tests alone do not
+prove the deployed API or database persistence.
 
-### Live tests
-
-The live suite spawns the real `nbq-mcp` process over stdio and talks to the real API. It
-is opt-in and skipped unless `NBQ_LIVE=1`:
-
-```bash
-NBQ_LIVE=1 \
-NBQ_LIVE_RUNTIME_KEY=<runtime key> \
-NBQ_LIVE_BASE_URL=https://api.zelinqa.ai \
-uv run pytest -m live tests/live -s
-```
-
-Optional keys enable the negative cases: `NBQ_LIVE_REVOKED_KEY` and
-`NBQ_LIVE_CONFIG_READ_KEY` (a key without the `runtime` scope). Tests needing a key that is
-not set are skipped. The suite prints request ids and error codes only, never a key and
-never a verbatim, and spaces its `/next` calls by one second to respect the staging Bedrock
-quota.
-
-## License
-
-Apache-2.0 — see [`LICENSE`](LICENSE).
+Apache-2.0. See [SECURITY.md](SECURITY.md) for vulnerability reporting.
