@@ -1,4 +1,4 @@
-"""A fake async NBQ client, used to drive the server without any network call.
+"""A fake async Zelinqa client, used to drive the server without any network call.
 
 The fake returns the SDK's own response models, built from the contract example
 payloads, and raises the SDK's own typed exceptions: the translation the server

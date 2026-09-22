@@ -70,7 +70,9 @@ def to_payload(value: Any) -> dict[str, Any]:
 
     payload = jsonable(value)
     if not isinstance(payload, dict):
-        raise TypeError(f"expected an object response from the NBQ SDK, got {type(value).__name__}")
+        raise TypeError(
+            f"expected an object response from the Zelinqa SDK, got {type(value).__name__}"
+        )
     return cast("dict[str, Any]", payload)
 
 

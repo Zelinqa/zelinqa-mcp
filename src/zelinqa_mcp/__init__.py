@@ -1,4 +1,4 @@
-"""Official MCP server for the Zelinqa NBQ API.
+"""Official MCP server for the Zelinqa API.
 
 The server is a thin protocol adapter: every tool call goes through the official
 Python SDK ``nbq``, which talks to the public REST API at

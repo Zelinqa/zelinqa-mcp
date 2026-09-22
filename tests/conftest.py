@@ -24,7 +24,7 @@ _KEY_ENV_VARS = (
 
 @pytest.fixture(autouse=True)
 def clean_environment(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """No ambient NBQ configuration leaks into a test."""
+    """No ambient Zelinqa configuration leaks into a test."""
 
     for name in _KEY_ENV_VARS:
         monkeypatch.delenv(name, raising=False)

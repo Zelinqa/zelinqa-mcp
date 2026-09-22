@@ -49,5 +49,5 @@ The low-level API remains available for explicit advanced integrations.
 
 For configuration, use the separate configuration client and the necessary
 read/write/publish scopes. Do not create, publish, delete or test on a customer's
-configuration without authorization. Prefer a dedicated synthetic test NBQ.
+configuration without authorization. Prefer a dedicated synthetic test domain.
 The skill grants no authorization to mutate live data or publish packages.

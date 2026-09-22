@@ -27,7 +27,7 @@ Never paste keys into a chat, repository or report. Host examples are in
 
 | Environment variable | Purpose |
 |---|---|
-| `ZELINQA_API_KEY` | Required runtime key, scoped to one NBQ |
+| `ZELINQA_API_KEY` | Required runtime key, scoped to one Zelinqa |
 | `ZELINQA_BASE_URL` | Default `https://api.zelinqa.ai` |
 | `ZELINQA_TIMEOUT_SECONDS` | Per-attempt timeout, default 30 seconds |
 | `ZELINQA_MAX_RETRIES` | Retry count, default 2 |
@@ -114,7 +114,7 @@ CI runs functional tests over the in-memory MCP transport with a fake SDK, plus
 lint, types and packaging. Live tests are separate and opt-in: `ZELINQA_LIVE=1`
 with `ZELINQA_LIVE_RUNTIME_KEY`, then `uv run pytest -m live tests/live`.
 Optional revoked/read-only keys exercise authorization failures. Use a dedicated
-synthetic NBQ: the live tests create sessions and feedback. Unit tests alone do not
+synthetic Zelinqa: the live tests create sessions and feedback. Unit tests alone do not
 prove the deployed API or database persistence.
 
 Apache-2.0. See [SECURITY.md](SECURITY.md) for vulnerability reporting.

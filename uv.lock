@@ -1540,7 +1540,7 @@ wheels = [
 [[package]]
 name = "zelinqa"
 version = "1.0.0"
-source = { git = "https://github.com/Zelinqa/nbq-sdk.git?rev=82fe9f30897dcb585be2d0a0ba2a72f1a5b25812#82fe9f30897dcb585be2d0a0ba2a72f1a5b25812" }
+source = { git = "https://github.com/Zelinqa/nbq-sdk.git?rev=01365aa54bb36cd583ac4e6c668394e124327fb2#01365aa54bb36cd583ac4e6c668394e124327fb2" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
@@ -1569,7 +1569,7 @@ dev = [
 requires-dist = [
     { name = "mcp", specifier = ">=2.2,<3" },
     { name = "pydantic", specifier = ">=2.12,<3" },
-    { name = "zelinqa", git = "https://github.com/Zelinqa/nbq-sdk.git?rev=82fe9f30897dcb585be2d0a0ba2a72f1a5b25812" },
+    { name = "zelinqa", git = "https://github.com/Zelinqa/nbq-sdk.git?rev=01365aa54bb36cd583ac4e6c668394e124327fb2" },
 ]
 
 [package.metadata.requires-dev]

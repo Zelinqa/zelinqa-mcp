@@ -4,7 +4,7 @@ Field names are the contract names in snake_case, so a host that read the public
 API documentation can call these tools without a translation table.
 
 Two request schemas of the contract are ``oneOf`` unions discriminated by a
-literal (``ContextUpdate`` on ``mode``, ``SubObjectiveOverrideUpdate`` and
+literal (``ContextUpdate`` on ``mode``, ``DimensionOverrideUpdate`` and
 ``DataClientUpdate`` on ``operation``). They are exposed here as one flat object
 per family with the discriminator plus the fields of each branch, validated by a
 model validator: nested ``oneOf`` schemas are poorly supported by MCP hosts,
@@ -92,7 +92,7 @@ class PreviousTurnInput(_Input):
     """What the host actually asked and what the user actually answered.
 
     `decision_id`, `question_id` and `outcome` are optional helpers, never
-    identifiers the host should fabricate: when they are absent NBQ resolves the
+    identifiers the host should fabricate: when they are absent Zelinqa resolves the
     candidate that was used from the pending decision, `assistant_text`, the
     structured answer and the context. Reformulating a question is supported.
     """
@@ -104,7 +104,7 @@ class PreviousTurnInput(_Input):
         Field(
             default=None,
             description=(
-                "asked_answered, asked_no_answer or refused. Omit it and NBQ infers it; "
+                "asked_answered, asked_no_answer or refused. Omit it and Zelinqa infers it; "
                 "a question that was never asked simply has no outcome."
             ),
         ),
@@ -140,11 +140,11 @@ class PreviousTurnInput(_Input):
 
 
 class ContextUpdateInput(_Input):
-    """Context that appeared since the last NBQ call.
+    """Context that appeared since the last Zelinqa call.
 
     Either a compact summary (`mode="summary"` with `text`) or the ordered delta
     of new messages (`mode="messages"` with `messages`). Never resend history
-    NBQ has already processed.
+    Zelinqa has already processed.
     """
 
     mode: Literal["summary", "messages"]
@@ -206,15 +206,15 @@ class DataUpdateInput(_Input):
         return self
 
 
-class SubObjectiveUpdateInput(_Input):
-    """Client control over one sub-objective."""
+class DimensionUpdateInput(_Input):
+    """Client control over one dimension."""
 
     id: Annotated[str, Field(max_length=128)]
     operation: Annotated[
         Literal["set", "exclude", "clear"],
         Field(
             description=(
-                "set applies `status`; exclude removes the sub-objective from selection "
+                "set applies `status`; exclude removes the dimension from selection "
                 "and from the objective's denominators; clear drops the override."
             )
         ),
@@ -227,10 +227,10 @@ class SubObjectiveUpdateInput(_Input):
     @model_validator(mode="after")
     def _check_branch(self) -> Self:
         if self.operation == "set" and self.status is None:
-            raise ValueError('a sub-objective update with operation="set" needs a status')
+            raise ValueError('a dimension update with operation="set" needs a status')
         if self.operation != "set" and self.status is not None:
             raise ValueError(
-                f'a sub-objective update with operation="{self.operation}" takes no status'
+                f'a dimension update with operation="{self.operation}" takes no status'
             )
         return self
 
@@ -257,27 +257,27 @@ class ClientUpdatesInput(_Input):
     """Explicit updates from the calling system. They win over inference."""
 
     data: Annotated[list[DataUpdateInput] | None, Field(default=None, max_length=100)] = None
-    sub_objectives: Annotated[
-        list[SubObjectiveUpdateInput] | None, Field(default=None, max_length=100)
+    dimensions: Annotated[
+        list[DimensionUpdateInput] | None, Field(default=None, max_length=100)
     ] = None
     objective: ObjectiveUpdateInput | None = None
 
     @model_validator(mode="after")
     def _require_one_field(self) -> Self:
-        if self.data is None and self.sub_objectives is None and self.objective is None:
-            raise ValueError("client_updates must carry data, sub_objectives or objective")
+        if self.data is None and self.dimensions is None and self.objective is None:
+            raise ValueError("client_updates must carry data, dimensions or objective")
         return self
 
 
-class SubObjectiveSelectionInput(_Input):
-    """Restrict or prefer some sub-objectives for this call only."""
+class DimensionSelectionInput(_Input):
+    """Restrict or prefer some dimensions for this call only."""
 
     ids: Annotated[list[str], Field(min_length=1, max_length=100)]
     mode: Annotated[
         Literal["restrict", "prefer"],
         Field(
             description=(
-                "restrict strictly forbids questions outside these sub-objectives; "
+                "restrict strictly forbids questions outside these dimensions; "
                 "prefer favours them but allows a fallback, reported as "
                 "constraints_relaxed in warnings."
             )
@@ -292,7 +292,7 @@ class SelectionInput(_Input):
         int | None,
         Field(default=None, ge=1, le=10, description="Overrides the configured number."),
     ] = None
-    sub_objectives: SubObjectiveSelectionInput | None = None
+    dimensions: DimensionSelectionInput | None = None
     allowed_question_types: Annotated[
         list[QuestionType] | None, Field(default=None, min_length=1)
     ] = None
@@ -309,7 +309,7 @@ class SelectionInput(_Input):
 
 
 class InitialHistoryItemInput(_Input):
-    """One message of a conversation that started outside NBQ.
+    """One message of a conversation that started outside Zelinqa.
 
     Consumed once in memory to build the initial state: never persisted, never
     returned.

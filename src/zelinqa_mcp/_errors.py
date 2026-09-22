@@ -30,7 +30,7 @@ _MAX_DETAILS_CHARS = 2000
 # scope the authorizer requires for the route. Those cases are indistinguishable
 # from outside, so one message covers them and carries the HTTP status.
 AUTH_HINT = (
-    "the NBQ API key is missing, invalid, revoked, expired, or does not carry the "
+    "the Zelinqa API key is missing, invalid, revoked, expired, or does not carry the "
     "`runtime` scope (check ZELINQA_API_KEY)"
 )
 AUTH_MESSAGE = f"unauthorized: {AUTH_HINT}"
@@ -84,7 +84,7 @@ def tool_error_for(error: Exception) -> ToolError:
 
     if isinstance(error, ZelinqaConnectionError):
         return ToolError(
-            "connection_error: the NBQ API could not be reached after retrying "
+            "connection_error: the Zelinqa API could not be reached after retrying "
             f"({scrub_secrets(str(error)) or type(error).__name__}). "
             "Check network access to https://api.zelinqa.ai and retry."
         )

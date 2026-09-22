@@ -238,7 +238,7 @@ async def test_next_forwards_a_structured_answer_and_selection(
             selection={
                 "candidate_count": 2,
                 "allowed_question_types": ["single_choice", "multiple_choice"],
-                "sub_objectives": {"ids": ["so_besoin"], "mode": "restrict"},
+                "dimensions": {"ids": ["so_besoin"], "mode": "restrict"},
             },
         )
 
@@ -252,7 +252,7 @@ async def test_next_forwards_a_structured_answer_and_selection(
     assert sent["selection"] == {
         "candidate_count": 2,
         "allowed_question_types": ["single_choice", "multiple_choice"],
-        "sub_objectives": {"ids": ["so_besoin"], "mode": "restrict"},
+        "dimensions": {"ids": ["so_besoin"], "mode": "restrict"},
     }
 
 
@@ -285,7 +285,7 @@ async def test_stop_carries_no_candidate_and_a_stop_reason(client: FakeRuntimeCl
     assert result["decision_id"] is None
     assert result["candidates"] == []
     assert result["warnings"] == ["objective_achieved", "max_turns_reached"]
-    overrides = result["progress"]["sub_objectives"][2]["client_override"]
+    overrides = result["progress"]["dimensions"][2]["client_override"]
     assert overrides["status"] == "excluded"
 
 

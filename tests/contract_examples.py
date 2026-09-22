@@ -30,7 +30,7 @@ SESSION_NEUVE: dict[str, Any] = {
             "client_override": None,
             "effective_status": "not_started",
         },
-        "sub_objectives": [
+        "dimensions": [
             {
                 "id": "so_besoin",
                 "order_position": 0,
@@ -100,7 +100,7 @@ DECISION_NORMALE: dict[str, Any] = {
             "client_override": None,
             "effective_status": "in_progress",
         },
-        "sub_objectives": [
+        "dimensions": [
             {
                 "id": "so_besoin",
                 "order_position": 0,
@@ -165,7 +165,7 @@ DECISION_APRES_MAX_TURNS: dict[str, Any] = {
             "client_override": None,
             "effective_status": "in_progress",
         },
-        "sub_objectives": [
+        "dimensions": [
             {
                 "id": "so_besoin",
                 "order_position": 0,
@@ -217,7 +217,7 @@ ARRET_SANS_QUESTION: dict[str, Any] = {
             "client_override": None,
             "effective_status": "covered",
         },
-        "sub_objectives": [
+        "dimensions": [
             {
                 "id": "so_besoin",
                 "order_position": 0,
