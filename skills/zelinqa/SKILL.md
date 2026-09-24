@@ -24,6 +24,11 @@ user-selected instructions, not additional API calls.
   default. Unlisted free answers can be submitted as `user_text` for analysis.
 - Use `zelinqa_add_context` for additional context, `zelinqa_status` for progress,
   and `zelinqa_feedback` only for an observed business result.
+- When the host has confirmed information or a dimension status, use
+  `zelinqa_adjust` instead of asking again. Use only configured business IDs and
+  verified values; it changes state without consuming a turn. After a conflict,
+  refresh with `zelinqa_status` and reconcile before retrying. An already pending
+  question is not recalculated by `adjust`; prefer adjusting before requesting it.
 - After an interrupted call or conflict, refresh status and reconcile with the
   pending question. Do not blindly replay an answer. Serialize calls per conversation.
 - Preserve warnings and degraded-mode indicators. Reaching a turn limit does not

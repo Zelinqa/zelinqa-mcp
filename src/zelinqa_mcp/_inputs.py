@@ -184,7 +184,7 @@ class DataUpdateInput(_Input):
     without giving it a value.
     """
 
-    id: Annotated[str, Field(max_length=128, description="Success information id.")]
+    id: Annotated[str, Field(min_length=1, max_length=128, description="Success information id.")]
     operation: Literal["set", "unset", "not_applicable"] = "set"
     value: Annotated[
         DataValue | None,

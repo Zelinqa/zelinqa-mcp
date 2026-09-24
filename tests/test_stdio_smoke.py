@@ -24,7 +24,7 @@ async def test_default_stdio_surface_and_network_error() -> None:
     )
     async with Client(parameters) as client:
         tools = await client.list_tools()
-        assert len(tools.tools) == 7
+        assert len(tools.tools) == 8
         assert len((await client.list_prompts()).prompts) == 2
         assert (await client.read_resource("zelinqa://guide")).contents
 

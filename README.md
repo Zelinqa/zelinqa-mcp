@@ -45,6 +45,7 @@ stdout is reserved for MCP. Do not share one process across untrusted users.
 | `zelinqa_next_question` | Get the first question, or redisplay the pending one without a new turn |
 | `zelinqa_answer` | Report actual text/choice labels and receive the next questions |
 | `zelinqa_add_context` | Add a context summary without asking a question |
+| `zelinqa_adjust` | Apply confirmed data, dimension statuses or an objective override without consuming a turn |
 | `zelinqa_status` | Refresh progress and the pending question |
 | `zelinqa_feedback` | Record an observed business result: success, partial or failure |
 | `zelinqa_forget` | Free the local handle; does **not** delete API data |
@@ -58,9 +59,21 @@ Example tool sequence:
 ```
 
 For a displayed choice use `choice_labels: ["Contemporary"]`. Use `candidate_rank`
-when asking a candidate other than rank 1. IDs and state versions are not tool inputs.
+when asking a candidate other than rank 1. Session, decision and question IDs,
+as well as state versions, are not tool inputs.
 Never invent a successful outcome: `asked_answered` is a trusted declaration.
 Unlisted answers can be submitted as `user_text` for language-model analysis.
+
+When a CRM already knows an answer, use `zelinqa_adjust` instead of asking again.
+It accepts `dimensions: [{"id":"configured_dimension_id","status":"excluded"}]`,
+`data: [{"id":"configured_information_id","value":2500}]`, or
+`objective: "not_achieved"`. Dimension statuses are `achieved`, `not_achieved`,
+and `excluded`; data also supports `operation: "unset"` and
+`operation: "not_applicable"` without a value. These are configured business IDs,
+not session or decision IDs. Use only verified information; `adjust` does not
+consume a turn and returns the usual business view. After a conflict, call `status`
+and reconcile before retrying. A question already pending is not recalculated by
+`adjust`; inspect the returned view and prefer adjusting before `next_question`.
 
 Results include question text, ranks, choice labels, objective progress and counters.
 Next-decision results also include warnings, stop reason and degraded-mode reasons.

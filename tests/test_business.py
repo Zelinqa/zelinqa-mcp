@@ -3,6 +3,7 @@ import json
 
 import anyio
 from mcp.client import Client
+from zelinqa.errors import ZelinqaStateVersionConflictError
 
 from zelinqa_mcp.business import build_business_server
 from zelinqa_mcp.server import build_server
@@ -46,6 +47,135 @@ async def test_default_tools_do_not_expose_ids_and_loop_has_no_extra_reads():
         assert turn["decision_id"] == DECISION_NORMALE["decision_id"]
         assert "outcome" not in turn
         assert not fake.calls_to("get_session")
+
+
+async def test_adjust_maps_business_updates_without_consuming_a_turn():
+    updated = copy.deepcopy(SESSION_NEUVE)
+    updated["versions"]["state_version"] = 1
+    updated["progress"]["objective"]["client_override"] = {"status": "achieved"}
+    updated["progress"]["objective"]["effective_status"] = "covered"
+    fake = FakeRuntimeClient().queue("create_session", SESSION_NEUVE).queue("apply_events", updated)
+
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        result = structured(
+            await client.call_tool(
+                "zelinqa_adjust",
+                {
+                    "conversation": "demo",
+                    "dimensions": [
+                        {"id": "so_besoin", "status": "achieved"},
+                        {"id": "so_budget", "status": "not_achieved"},
+                        {"id": "so_livraison", "status": "excluded"},
+                    ],
+                    "data": [
+                        {"id": "annual_budget", "value": 2500},
+                        {"id": "old_value", "operation": "unset"},
+                        {"id": "not_relevant", "operation": "not_applicable"},
+                    ],
+                    "objective": "achieved",
+                },
+            )
+        )
+
+    assert result["turn_count"] == 0
+    assert result["progress"]["effective_status"] == "covered"
+    assert "state_version" not in json.dumps(result)
+    assert not fake.calls_to("next")
+    sent = fake.calls_to("apply_events")[0].kwargs
+    assert sent["state_version"] == 0
+    assert sent["context_update"] is None
+    assert sent["client_updates"] == {
+        "dimensions": [
+            {"id": "so_besoin", "operation": "set", "status": "achieved"},
+            {"id": "so_budget", "operation": "set", "status": "not_achieved"},
+            {"id": "so_livraison", "operation": "exclude"},
+        ],
+        "data": [
+            {"id": "annual_budget", "operation": "set", "value": 2500},
+            {"id": "old_value", "operation": "unset"},
+            {"id": "not_relevant", "operation": "not_applicable"},
+        ],
+        "objective": {"operation": "set", "status": "achieved"},
+    }
+
+
+async def test_adjust_preserves_a_pending_question_in_the_returned_view():
+    updated = copy.deepcopy(SESSION_NEUVE)
+    updated["pending_decision"] = {
+        "decision_id": DECISION_NORMALE["decision_id"],
+        "candidates": DECISION_NORMALE["candidates"],
+    }
+    updated["turn_count"] = DECISION_NORMALE["turn_count"]
+    updated["turns_remaining"] = DECISION_NORMALE["turns_remaining"]
+    updated["versions"]["state_version"] = 5
+    fake = (
+        FakeRuntimeClient()
+        .queue("create_session", SESSION_NEUVE)
+        .queue("next", DECISION_NORMALE)
+        .queue("apply_events", updated)
+    )
+
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        pending = structured(
+            await client.call_tool("zelinqa_next_question", {"conversation": "demo"})
+        )
+        adjusted = structured(
+            await client.call_tool(
+                "zelinqa_adjust", {"conversation": "demo", "objective": "not_achieved"}
+            )
+        )
+
+    assert adjusted["questions"] == pending["questions"]
+    assert adjusted["turn_count"] == pending["turn_count"]
+    assert len(fake.calls_to("next")) == 1
+
+
+async def test_adjust_rejects_missing_or_ambiguous_updates_before_api_call():
+    fake = FakeRuntimeClient().queue("create_session", SESSION_NEUVE)
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        for arguments in [{}, {"dimensions": [{"id": "so_budget", "status": "excluded"}] * 2}]:
+            assert "invalid_request" in error_text(
+                await client.call_tool("zelinqa_adjust", {"conversation": "demo", **arguments})
+            )
+        for arguments in [
+            {"data": [{"id": "budget", "operation": "unset", "value": 5}]},
+            {"data": [{"id": "budget", "operation": "set"}]},
+            {"data": [{"id": "", "value": 5}]},
+        ]:
+            assert "validation error" in error_text(
+                await client.call_tool("zelinqa_adjust", {"conversation": "demo", **arguments})
+            )
+    assert not fake.calls_to("apply_events")
+
+
+async def test_adjust_conflict_requires_refresh_before_retry():
+    conflict = ZelinqaStateVersionConflictError(
+        "session has changed", status_code=409, code="state_version_conflict"
+    )
+    refreshed = copy.deepcopy(SESSION_NEUVE)
+    refreshed["versions"]["state_version"] = 2
+    fake = (
+        FakeRuntimeClient()
+        .queue("create_session", SESSION_NEUVE)
+        .queue("apply_events", conflict, refreshed)
+        .queue("get_session", refreshed)
+    )
+    arguments = {"conversation": "demo", "objective": "not_achieved"}
+
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        assert "call zelinqa_status" in error_text(
+            await client.call_tool("zelinqa_adjust", arguments)
+        )
+        assert "refresh_required" in error_text(await client.call_tool("zelinqa_adjust", arguments))
+        structured(await client.call_tool("zelinqa_status", {"conversation": "demo"}))
+        structured(await client.call_tool("zelinqa_adjust", arguments))
+
+    assert len(fake.calls_to("apply_events")) == 2
+    assert [call.kwargs["state_version"] for call in fake.calls_to("apply_events")] == [0, 2]
 
 
 async def test_capacity_no_silent_eviction_and_forget_not_delete():

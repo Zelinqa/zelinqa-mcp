@@ -33,7 +33,12 @@ async def test_business_conversation_over_real_stdio():
         assert (await client.read_resource("zelinqa://guide")).contents
         name = "sdk-business-" + uuid.uuid4().hex[:8]
         args = {"conversation": name}
-        _ok(await client.call_tool("zelinqa_start", args), "start")
+        started = _ok(await client.call_tool("zelinqa_start", args), "start")
+        adjusted = _ok(
+            await client.call_tool("zelinqa_adjust", dict(args, objective="not_achieved")),
+            "adjust",
+        )
+        assert adjusted["turn_count"] == started["turn_count"]
         first = _ok(await client.call_tool("zelinqa_next_question", args), "next")
         assert first["questions"]
         replay = _ok(await client.call_tool("zelinqa_next_question", args), "cached next")
