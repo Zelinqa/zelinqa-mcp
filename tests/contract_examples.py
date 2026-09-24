@@ -1,6 +1,6 @@
 """Response payloads copied from the V1 contract examples.
 
-Source: `openapi/nbq-v1.openapi.yaml` in nbq-engine, `components/examples`
+Source: the public V1 OpenAPI contract, `components/examples`
 (`SessionNeuve`, `DecisionNormale`, `DecisionApresMaxTurns`, `ArretSansQuestion`)
 and the `202` example of `POST /v1/sessions/{session_id}/feedback`.
 

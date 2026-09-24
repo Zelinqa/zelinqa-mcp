@@ -2,7 +2,7 @@
 
 Architecture, not negotiable:
 
-    MCP tool -> Python SDK `nbq` -> public REST API https://api.zelinqa.ai
+    MCP tool -> Python SDK `zelinqa` -> public REST API https://api.zelinqa.ai
 
 The server never speaks HTTP itself, never imports the engine, never touches a
 database, and never exposes a selection score.
@@ -146,7 +146,7 @@ StateVersion = Annotated[int | None, _STATE_VERSION_FIELD]
 
 
 class ZelinqaRuntimeClient(Protocol):
-    """The slice of `nbq.AsyncZelinqaClient` this server uses."""
+    """The slice of `zelinqa.AsyncZelinqaClient` this server uses."""
 
     async def create_session(
         self,
@@ -248,7 +248,7 @@ def default_client_factory() -> ZelinqaRuntimeClient:
         options["max_retries"] = max_retries
 
     # No cast: mypy checks structurally that the SDK client still satisfies
-    # ZelinqaRuntimeClient, so a signature drift in `nbq` fails the type check here.
+    # ZelinqaRuntimeClient, so a signature drift in `zelinqa` fails the type check here.
     return AsyncZelinqaClient(**options)
 
 
@@ -277,7 +277,7 @@ class _ServerState:
                     except ImportError as error:
                         raise ToolError(
                             "sdk_unavailable: the official Zelinqa SDK could not be loaded "
-                            f"({error}). Reinstall zelinqa-mcp so that `nbq` 1.x is present."
+                            f"({error}). Reinstall zelinqa-mcp so that `zelinqa` 1.x is present."
                         ) from error
                     except (ValueError, ZelinqaAPIError, ZelinqaConnectionError) as error:
                         raise tool_error_for(error) from error

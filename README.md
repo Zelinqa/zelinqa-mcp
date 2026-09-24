@@ -3,8 +3,7 @@
 The official MCP adapter for goal-oriented question selection. The model handles
 the conversation; the SDK handles session IDs, pending decisions and state versions.
 
-**Release candidate: not published yet.** Publication depends on `zelinqa` 1.0.0.
-See [PUBLISHING.md](PUBLISHING.md). Python 3.11+ required.
+Python 3.11+ required. Release prerequisites are in [PUBLISHING.md](PUBLISHING.md).
 
 ```text
 MCP host → zelinqa-mcp → Python SDK zelinqa → api.zelinqa.ai
@@ -12,11 +11,11 @@ MCP host → zelinqa-mcp → Python SDK zelinqa → api.zelinqa.ai
 
 ## Start
 
-After publication: `uvx zelinqa-mcp`. During review:
+Once available on PyPI, run `uvx zelinqa-mcp`. To run from source:
 
 ```bash
-git clone https://github.com/Zelinqa/nbq-mcp.git
-cd nbq-mcp
+git clone https://github.com/Zelinqa/zelinqa-mcp.git
+cd zelinqa-mcp
 uv sync --group dev --locked
 uv run zelinqa-mcp --version
 ```

@@ -650,7 +650,10 @@ async def test_unknown_session_is_readable(client: FakeRuntimeClient) -> None:
     assert "unknown_session: La session demandée est inconnue. (request_id=req_9007)" in message
 
 
-async def test_connection_failure_is_readable(client: FakeRuntimeClient) -> None:
+async def test_connection_failure_is_readable(
+    client: FakeRuntimeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ZELINQA_BASE_URL", "https://staging.example.test")
     client.queue("get_session", ZelinqaConnectionError("timed out after 3 attempts"))
 
     async with connect(client) as session:
@@ -658,7 +661,8 @@ async def test_connection_failure_is_readable(client: FakeRuntimeClient) -> None
 
     assert "connection_error" in message
     assert "timed out after 3 attempts" in message
-    assert "api.zelinqa.ai" in message
+    assert "ZELINQA_BASE_URL" in message
+    assert "api.zelinqa.ai" not in message
 
 
 async def test_the_api_key_never_reaches_a_tool_result(

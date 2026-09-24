@@ -1,8 +1,8 @@
 # Zelinqa MCP
 
 Adaptateur MCP officiel pour mener une conversation guidée par les objectifs.
-**Version candidate, pas encore publiée.** Le SDK Python `zelinqa` doit être publié
-avant `zelinqa-mcp`. Voir [le guide complet](README.md) et [la publication](PUBLISHING.md).
+Le SDK Python `zelinqa` est une dépendance. Voir [le guide complet](README.md)
+et [les prérequis de publication](PUBLISHING.md).
 
 Le modèle manipule le texte des questions, les réponses, les libellés des choix et
 un nom de conversation. Le SDK gère les identifiants de session, de question et de
@@ -18,8 +18,8 @@ décision ainsi que la version de l'état.
 | `zelinqa_feedback` | Enregistrer le résultat métier observé |
 | `zelinqa_forget` | Libérer la mémoire locale, sans supprimer les données serveur |
 
-Installation après publication : `uvx zelinqa-mcp`. En attendant, utiliser le checkout
-et `uv run zelinqa-mcp`. Configurer la clé runtime dans `ZELINQA_API_KEY` côté hôte,
+Une fois disponible sur PyPI : `uvx zelinqa-mcp`. Depuis les sources :
+`uv run zelinqa-mcp`. Configurer la clé runtime dans `ZELINQA_API_KEY` côté hôte,
 jamais dans la conversation. Les exemples de configuration sont dans `examples/`.
 
 Le transport est **stdio uniquement**, isolé par hôte/utilisateur de confiance.

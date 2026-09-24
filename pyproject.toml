@@ -30,8 +30,8 @@ dependencies = [
 [project.urls]
 Documentation = "https://docs.zelinqa.ai"
 Homepage = "https://zelinqa.ai"
-Repository = "https://github.com/Zelinqa/nbq-mcp"
-Issues = "https://github.com/Zelinqa/nbq-mcp/issues"
+Repository = "https://github.com/Zelinqa/zelinqa-mcp"
+Issues = "https://github.com/Zelinqa/zelinqa-mcp/issues"
 
 [project.scripts]
 zelinqa-mcp = "zelinqa_mcp.cli:main"
@@ -49,7 +49,7 @@ packages = ["src/zelinqa_mcp"]
 # Review-only override until the Zelinqa SDK is published on PyPI.
 [tool.uv.sources]
 # Exact tested commit, never a moving branch. Remove before MCP publication.
-zelinqa = { git = "https://github.com/Zelinqa/nbq-sdk.git", rev = "01365aa54bb36cd583ac4e6c668394e124327fb2" }
+zelinqa = { git = "https://github.com/Zelinqa/zelinqa-sdk.git", rev = "8b694e1c460c663faeb49f122af30d2377268b0f" }
 
 [dependency-groups]
 dev = [

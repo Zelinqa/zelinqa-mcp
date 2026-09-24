@@ -86,7 +86,7 @@ def tool_error_for(error: Exception) -> ToolError:
         return ToolError(
             "connection_error: the Zelinqa API could not be reached after retrying "
             f"({scrub_secrets(str(error)) or type(error).__name__}). "
-            "Check network access to https://api.zelinqa.ai and retry."
+            "Check network access to the configured API URL (ZELINQA_BASE_URL) and retry."
         )
 
     if isinstance(error, ValidationError):
