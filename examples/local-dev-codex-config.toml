@@ -1,0 +1,9 @@
+# ~/.codex/config.toml — running from a checkout, before nbq-mcp is on PyPI
+[mcp_servers.nbq]
+command = "uv"
+args = ["run", "--directory", "/absolute/path/to/nbq-mcp", "nbq-mcp"]
+# Codex asks before every MCP tool call unless the server approves its tools;
+# in `codex exec` (non-interactive) an unapproved call is auto-rejected as
+# "user cancelled MCP tool call". The six NBQ tools only act on your own NBQ.
+default_tools_approval_mode = "approve"
+env = { NBQ_API_KEY = "PASTE_YOUR_RUNTIME_KEY_HERE" }

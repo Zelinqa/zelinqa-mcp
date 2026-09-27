@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "nbq": {
+      "command": "uv",
+      "args": ["run", "--directory", "/absolute/path/to/nbq-mcp", "nbq-mcp"],
+      "env": {
+        "NBQ_API_KEY": "${NBQ_API_KEY}",
+        "NBQ_BASE_URL": "https://api.zelinqa.ai"
+      }
+    }
+  }
+}

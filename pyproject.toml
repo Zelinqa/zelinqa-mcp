@@ -1,0 +1,92 @@
+[project]
+name = "nbq-mcp"
+version = "1.0.0"
+description = "Official MCP server for the Zelinqa NBQ API"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Zelinqa", email = "support@zelinqa.ai" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["nbq", "mcp", "model-context-protocol", "next-best-question", "zelinqa"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "nbq>=1.0.0,<2",
+    # mcp 2.x: the server class is mcp.server.mcpserver.MCPServer and host/port are
+    # transport options of run(). The major bound is deliberate.
+    "mcp>=2.2,<3",
+    # mcp 2.x requires pydantic 2.12 or newer.
+    "pydantic>=2.12,<3",
+]
+
+[project.urls]
+Documentation = "https://docs.zelinqa.ai"
+Homepage = "https://zelinqa.ai"
+Repository = "https://github.com/Zelinqa/nbq-mcp"
+Issues = "https://github.com/Zelinqa/nbq-mcp/issues"
+
+[project.scripts]
+nbq-mcp = "nbq_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/nbq_mcp", "examples", "README.md", "README.fr.md", "LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nbq_mcp"]
+
+# The SDK 1.0.0 is not on PyPI yet, so the build resolves `nbq` from the release
+# branch of the SDK repository.
+# switch to PyPI after nbq 1.0.0 is published
+[tool.uv.sources]
+# Temporary until nbq 1.0.0 is on PyPI: pinned to the exact SDK commit that was
+# recette-tested, never to a moving branch. Removed by the switch in PUBLISHING.md.
+nbq = { git = "https://github.com/Zelinqa/nbq-sdk.git", rev = "887c704eb4e66a7ce3b7de28249a44bbb34264cc" }
+
+[dependency-groups]
+dev = [
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6.0",
+    "twine>=6.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+# The live suite talks to the real API and is opt-in: NBQ_LIVE=1 plus -m live.
+addopts = '-ra -q --strict-markers -m "not live"'
+markers = ["live: hits the real NBQ API, requires NBQ_LIVE=1 and live keys"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "UP", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nbq_mcp"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[[tool.mypy.overrides]]
+# nbq 1.0.0 is not published yet; keep type checking green in environments where
+# the SDK is not installed. Remove once `nbq` resolves from PyPI.
+module = ["nbq.*"]
+ignore_missing_imports = true
