@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "nbq": {
+    "zelinqa": {
       "command": "uvx",
-      "args": ["nbq-mcp"],
+      "args": ["zelinqa-mcp"],
       "env": {
-        "NBQ_API_KEY": "${NBQ_API_KEY}"
+        "ZELINQA_API_KEY": "${ZELINQA_API_KEY}"
       }
     }
   }

@@ -18,8 +18,8 @@ from typing import Annotated, Any, Protocol
 import anyio
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
-from nbq.errors import NBQAPIError, NBQConnectionError
 from pydantic import Field, ValidationError
+from zelinqa.errors import ZelinqaAPIError, ZelinqaConnectionError
 
 from . import __version__
 from ._errors import AUTH_MESSAGE, tool_error_for
@@ -34,30 +34,30 @@ from ._inputs import (
 )
 from ._payloads import state_version_of, to_payload, with_state_version
 
-SERVER_NAME = "nbq"
+SERVER_NAME = "zelinqa"
 
 SERVER_INSTRUCTIONS = """\
 NBQ (Next Best Question) qualifies a conversation: you ask the questions, NBQ \
 decides which question is worth asking next.
 
 Turn loop:
-1. nbq_create_session once per conversation (or nbq_resume_session to pick an \
+1. zelinqa_create_session once per conversation (or zelinqa_resume_session to pick an \
 existing one back up).
-2. nbq_next with no previous_turn for the first turn. Ask the candidate of rank 1 \
+2. zelinqa_next with no previous_turn for the first turn. Ask the candidate of rank 1 \
 in your own words.
-3. nbq_next again with previous_turn = what you asked and what the user answered.
+3. zelinqa_next again with previous_turn = what you asked and what the user answered.
 4. Repeat. You decide when to stop: NBQ keeps proposing and reports \
 max_turns_reached / objective_achieved in `warnings`. `action: "stop"` means no \
 question is left at all.
-5. nbq_submit_feedback once the conversation produced its real outcome.
+5. zelinqa_submit_feedback once the conversation produced its real outcome.
 
-Use nbq_apply_events to feed context or known data without consuming a turn."""
+Use zelinqa_apply_events to feed context or known data without consuming a turn."""
 
 _CREATE_SESSION_DESCRIPTION = """\
 Start an NBQ session for one conversation.
 
 Returns the initial session state, including `state_version` (0) and \
-`max_turns`. No question yet: call nbq_next next.
+`max_turns`. No question yet: call zelinqa_next next.
 
 `initial_history` is only for a conversation that started outside NBQ; it is \
 consumed once to build the initial state and is never stored or returned."""
@@ -106,7 +106,7 @@ force closed questions or to stay inside a sub-objective."""
 _APPLY_EVENTS_DESCRIPTION = """\
 Apply context or known data to the session without selecting a question.
 
-Same reducer as nbq_next, without the selection phase, so it does not consume a \
+Same reducer as zelinqa_next, without the selection phase, so it does not consume a \
 turn and does not replace the pending decision. Use it to catch up on messages \
 that did not go through NBQ (`context_update`), to inject a value your own system \
 already knows so the question is not asked (`client_updates.data`), to correct a \
@@ -130,7 +130,7 @@ and does not retroactively change any scoring.
 correlation facts only — an id, an amount, a flag. Never put messages, answers, \
 summaries or transcripts in it."""
 
-_SESSION_ID_FIELD = Field(description="Session id returned by nbq_create_session.")
+_SESSION_ID_FIELD = Field(description="Session id returned by zelinqa_create_session.")
 _STATE_VERSION_FIELD = Field(
     default=None,
     ge=0,
@@ -145,8 +145,8 @@ SessionId = Annotated[str, _SESSION_ID_FIELD]
 StateVersion = Annotated[int | None, _STATE_VERSION_FIELD]
 
 
-class NBQRuntimeClient(Protocol):
-    """The slice of `nbq.AsyncNBQClient` this server uses."""
+class ZelinqaRuntimeClient(Protocol):
+    """The slice of `nbq.AsyncZelinqaClient` this server uses."""
 
     async def create_session(
         self,
@@ -190,11 +190,11 @@ class NBQRuntimeClient(Protocol):
     async def aclose(self) -> None: ...
 
 
-ClientFactory = Callable[[], NBQRuntimeClient]
+ClientFactory = Callable[[], ZelinqaRuntimeClient]
 
 
 class MissingAPIKeyError(RuntimeError):
-    """`NBQ_API_KEY` is absent from the server environment."""
+    """`ZELINQA_API_KEY` is absent from the server environment."""
 
 
 def _env_float(name: str) -> float | None:
@@ -218,38 +218,38 @@ def _env_int(name: str) -> int | None:
 
 
 def api_key_is_configured() -> bool:
-    """True when `NBQ_API_KEY` holds something usable."""
+    """True when `ZELINQA_API_KEY` holds something usable."""
 
-    return bool(os.environ.get("NBQ_API_KEY", "").strip())
+    return bool(os.environ.get("ZELINQA_API_KEY", "").strip())
 
 
-def default_client_factory() -> NBQRuntimeClient:
+def default_client_factory() -> ZelinqaRuntimeClient:
     """Build the async SDK client from the environment.
 
-    `NBQ_API_KEY` is required. `NBQ_BASE_URL`, `NBQ_TIMEOUT_SECONDS` and
-    `NBQ_MAX_RETRIES` are optional and fall back to the SDK defaults. The key is
+    `ZELINQA_API_KEY` is required. `ZELINQA_BASE_URL`, `ZELINQA_TIMEOUT_SECONDS` and
+    `ZELINQA_MAX_RETRIES` are optional and fall back to the SDK defaults. The key is
     read here and nowhere else, and is never logged or returned.
     """
 
     if not api_key_is_configured():
-        raise MissingAPIKeyError("NBQ_API_KEY is not set")
+        raise MissingAPIKeyError("ZELINQA_API_KEY is not set")
 
-    from nbq import AsyncNBQClient  # imported lazily: tests inject a fake client
+    from zelinqa import AsyncZelinqaClient  # imported lazily: tests inject a fake client
 
     options: dict[str, Any] = {}
-    base_url = os.environ.get("NBQ_BASE_URL", "").strip()
+    base_url = os.environ.get("ZELINQA_BASE_URL", "").strip()
     if base_url:
         options["base_url"] = base_url
-    timeout = _env_float("NBQ_TIMEOUT_SECONDS")
+    timeout = _env_float("ZELINQA_TIMEOUT_SECONDS")
     if timeout is not None:
         options["timeout"] = timeout
-    max_retries = _env_int("NBQ_MAX_RETRIES")
+    max_retries = _env_int("ZELINQA_MAX_RETRIES")
     if max_retries is not None:
         options["max_retries"] = max_retries
 
     # No cast: mypy checks structurally that the SDK client still satisfies
-    # NBQRuntimeClient, so a signature drift in `nbq` fails the type check here.
-    return AsyncNBQClient(**options)
+    # ZelinqaRuntimeClient, so a signature drift in `nbq` fails the type check here.
+    return AsyncZelinqaClient(**options)
 
 
 class _ServerState:
@@ -262,11 +262,11 @@ class _ServerState:
 
     def __init__(self, client_factory: ClientFactory) -> None:
         self._client_factory = client_factory
-        self._client: NBQRuntimeClient | None = None
+        self._client: ZelinqaRuntimeClient | None = None
         self._lock = anyio.Lock()
         self._versions: dict[str, int] = {}
 
-    async def client(self) -> NBQRuntimeClient:
+    async def client(self) -> ZelinqaRuntimeClient:
         if self._client is None:
             async with self._lock:
                 if self._client is None:
@@ -277,9 +277,9 @@ class _ServerState:
                     except ImportError as error:
                         raise ToolError(
                             "sdk_unavailable: the official NBQ SDK could not be loaded "
-                            f"({error}). Reinstall nbq-mcp so that `nbq` 1.x is present."
+                            f"({error}). Reinstall zelinqa-mcp so that `nbq` 1.x is present."
                         ) from error
-                    except (ValueError, NBQAPIError, NBQConnectionError) as error:
+                    except (ValueError, ZelinqaAPIError, ZelinqaConnectionError) as error:
                         raise tool_error_for(error) from error
         return self._client
 
@@ -299,12 +299,15 @@ class _ServerState:
         session_id = payload.get("session_id")
         version = state_version_of(payload)
         if isinstance(session_id, str) and session_id and version is not None:
+            # This is only a version cache: eviction triggers a fresh API read.
+            if session_id not in self._versions and len(self._versions) >= 128:
+                self._versions.pop(next(iter(self._versions)))
             self._versions[session_id] = version
 
 
 async def _resolve_state_version(
     state: _ServerState,
-    client: NBQRuntimeClient,
+    client: ZelinqaRuntimeClient,
     session_id: str,
     explicit: int | None,
 ) -> int:
@@ -320,7 +323,7 @@ async def _resolve_state_version(
     if version is None:
         raise ToolError(
             "unknown_state_version: the session state carried no versions.state_version; "
-            "call nbq_get_session and pass state_version explicitly"
+            "call zelinqa_get_session and pass state_version explicitly"
         )
     return version
 
@@ -335,11 +338,11 @@ async def _invoke(
 
     try:
         response = await call
-    except NBQAPIError as error:
+    except ZelinqaAPIError as error:
         if session_id is not None and getattr(error, "code", None) == "state_version_conflict":
             state.forget(session_id)
         raise tool_error_for(error) from error
-    except (NBQConnectionError, ValidationError, ValueError) as error:
+    except (ZelinqaConnectionError, ValidationError, ValueError) as error:
         raise tool_error_for(error) from error
 
     payload = to_payload(response)
@@ -347,7 +350,7 @@ async def _invoke(
     return with_state_version(payload)
 
 
-def build_server(
+def build_advanced_server(
     client_factory: ClientFactory | None = None,
     *,
     log_level: str | None = None,
@@ -355,7 +358,7 @@ def build_server(
     """Build the MCP server.
 
     `client_factory` is the injection point: tests pass a fake async client, and
-    production uses `default_client_factory`, which reads `NBQ_API_KEY` from the
+    production uses `default_client_factory`, which reads `ZELINQA_API_KEY` from the
     environment. The client is created on the first tool call and closed on
     shutdown.
 
@@ -383,8 +386,8 @@ def build_server(
         **settings,
     )
 
-    @server.tool(name="nbq_create_session", description=_CREATE_SESSION_DESCRIPTION)
-    async def nbq_create_session(
+    @server.tool(name="zelinqa_create_session", description=_CREATE_SESSION_DESCRIPTION)
+    async def zelinqa_create_session(
         client_reference: Annotated[
             str | None,
             Field(
@@ -421,13 +424,13 @@ def build_server(
             ),
         )
 
-    @server.tool(name="nbq_resume_session", description=_RESUME_SESSION_DESCRIPTION)
-    async def nbq_resume_session(session_id: SessionId) -> dict[str, Any]:
+    @server.tool(name="zelinqa_resume_session", description=_RESUME_SESSION_DESCRIPTION)
+    async def zelinqa_resume_session(session_id: SessionId) -> dict[str, Any]:
         client = await state.client()
         return await _invoke(state, client.get_session(session_id))
 
-    @server.tool(name="nbq_next", description=_NEXT_DESCRIPTION)
-    async def nbq_next(
+    @server.tool(name="zelinqa_next", description=_NEXT_DESCRIPTION)
+    async def zelinqa_next(
         session_id: SessionId,
         state_version: StateVersion = None,
         previous_turn: PreviousTurnInput | None = None,
@@ -450,8 +453,8 @@ def build_server(
             session_id=session_id,
         )
 
-    @server.tool(name="nbq_apply_events", description=_APPLY_EVENTS_DESCRIPTION)
-    async def nbq_apply_events(
+    @server.tool(name="zelinqa_apply_events", description=_APPLY_EVENTS_DESCRIPTION)
+    async def zelinqa_apply_events(
         session_id: SessionId,
         state_version: StateVersion = None,
         context_update: ContextUpdateInput | None = None,
@@ -459,7 +462,7 @@ def build_server(
     ) -> dict[str, Any]:
         if context_update is None and client_updates is None:
             raise ToolError(
-                "invalid_request: nbq_apply_events needs context_update or client_updates"
+                "invalid_request: zelinqa_apply_events needs context_update or client_updates"
             )
         client = await state.client()
         version = await _resolve_state_version(state, client, session_id, state_version)
@@ -474,13 +477,13 @@ def build_server(
             session_id=session_id,
         )
 
-    @server.tool(name="nbq_get_session", description=_GET_SESSION_DESCRIPTION)
-    async def nbq_get_session(session_id: SessionId) -> dict[str, Any]:
+    @server.tool(name="zelinqa_get_session", description=_GET_SESSION_DESCRIPTION)
+    async def zelinqa_get_session(session_id: SessionId) -> dict[str, Any]:
         client = await state.client()
         return await _invoke(state, client.get_session(session_id))
 
-    @server.tool(name="nbq_submit_feedback", description=_SUBMIT_FEEDBACK_DESCRIPTION)
-    async def nbq_submit_feedback(
+    @server.tool(name="zelinqa_submit_feedback", description=_SUBMIT_FEEDBACK_DESCRIPTION)
+    async def zelinqa_submit_feedback(
         session_id: SessionId,
         result: Annotated[
             FeedbackResult,
@@ -514,11 +517,25 @@ def build_server(
 
     # The decorators register the tools; the names are kept for introspection.
     _ = (
-        nbq_create_session,
-        nbq_resume_session,
-        nbq_next,
-        nbq_apply_events,
-        nbq_get_session,
-        nbq_submit_feedback,
+        zelinqa_create_session,
+        zelinqa_resume_session,
+        zelinqa_next,
+        zelinqa_apply_events,
+        zelinqa_get_session,
+        zelinqa_submit_feedback,
     )
     return server
+
+
+def build_server(
+    client_factory: ClientFactory | None = None,
+    *,
+    log_level: str | None = None,
+    advanced: bool = False,
+) -> MCPServer[None]:
+    """Business tools by default; the technical surface is explicitly opt-in."""
+    if advanced:
+        return build_advanced_server(client_factory, log_level=log_level)
+    from .business import build_business_server
+
+    return build_business_server(client_factory or default_client_factory, log_level=log_level)

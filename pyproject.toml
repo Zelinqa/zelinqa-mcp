@@ -1,5 +1,5 @@
 [project]
-name = "nbq-mcp"
+name = "zelinqa-mcp"
 version = "1.0.0"
 description = "Official MCP server for the Zelinqa NBQ API"
 readme = "README.md"
@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 authors = [{ name = "Zelinqa", email = "support@zelinqa.ai" }]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-keywords = ["nbq", "mcp", "model-context-protocol", "next-best-question", "zelinqa"]
+keywords = ["zelinqa", "mcp", "model-context-protocol", "next-best-question", "zelinqa"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "nbq>=1.0.0,<2",
+    "zelinqa>=1.0.0,<2",
     # mcp 2.x: the server class is mcp.server.mcpserver.MCPServer and host/port are
     # transport options of run(). The major bound is deliberate.
     "mcp>=2.2,<3",
@@ -34,25 +34,22 @@ Repository = "https://github.com/Zelinqa/nbq-mcp"
 Issues = "https://github.com/Zelinqa/nbq-mcp/issues"
 
 [project.scripts]
-nbq-mcp = "nbq_mcp.cli:main"
+zelinqa-mcp = "zelinqa_mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/nbq_mcp", "examples", "README.md", "README.fr.md", "LICENSE"]
+include = ["src/zelinqa_mcp", "examples", "skills", "README.md", "README.fr.md", "LICENSE"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nbq_mcp"]
+packages = ["src/zelinqa_mcp"]
 
-# The SDK 1.0.0 is not on PyPI yet, so the build resolves `nbq` from the release
-# branch of the SDK repository.
-# switch to PyPI after nbq 1.0.0 is published
+# Review-only override until the Zelinqa SDK is published on PyPI.
 [tool.uv.sources]
-# Temporary until nbq 1.0.0 is on PyPI: pinned to the exact SDK commit that was
-# recette-tested, never to a moving branch. Removed by the switch in PUBLISHING.md.
-nbq = { git = "https://github.com/Zelinqa/nbq-sdk.git", rev = "887c704eb4e66a7ce3b7de28249a44bbb34264cc" }
+# Exact tested commit, never a moving branch. Remove before MCP publication.
+zelinqa = { git = "https://github.com/Zelinqa/nbq-sdk.git", rev = "82fe9f30897dcb585be2d0a0ba2a72f1a5b25812" }
 
 [dependency-groups]
 dev = [
@@ -66,9 +63,9 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-# The live suite talks to the real API and is opt-in: NBQ_LIVE=1 plus -m live.
+# The live suite talks to the real API and is opt-in: ZELINQA_LIVE=1 plus -m live.
 addopts = '-ra -q --strict-markers -m "not live"'
-markers = ["live: hits the real NBQ API, requires NBQ_LIVE=1 and live keys"]
+markers = ["live: hits the real NBQ API, requires ZELINQA_LIVE=1 and live keys"]
 
 [tool.ruff]
 line-length = 100
@@ -79,14 +76,8 @@ select = ["E", "F", "W", "I", "N", "B", "UP", "RUF"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["nbq_mcp"]
+known-first-party = ["zelinqa_mcp"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
-
-[[tool.mypy.overrides]]
-# nbq 1.0.0 is not published yet; keep type checking green in environments where
-# the SDK is not installed. Remove once `nbq` resolves from PyPI.
-module = ["nbq.*"]
-ignore_missing_imports = true

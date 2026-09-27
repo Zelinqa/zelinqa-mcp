@@ -13,7 +13,7 @@ __all__ = ["__version__", "build_server"]
 
 
 def __getattr__(name: str) -> object:
-    # Lazy re-export so that `python -c "import nbq_mcp; nbq_mcp.__version__"`
+    # Lazy re-export so that `python -c "import zelinqa_mcp; zelinqa_mcp.__version__"`
     # never imports the SDK or the MCP runtime.
     if name == "build_server":
         from .server import build_server

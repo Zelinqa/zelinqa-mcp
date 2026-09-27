@@ -22,21 +22,21 @@ TRANSPORTS = ("stdio", "streamable-http")
 EXIT_MISSING_API_KEY = 2
 
 MISSING_KEY_MESSAGE = (
-    "nbq-mcp: NBQ_API_KEY is not set.\n"
+    "zelinqa-mcp: ZELINQA_API_KEY is not set.\n"
     "Set it to an NBQ API key carrying the `runtime` scope, for example in the "
     "`env` block of your MCP host configuration. The server refuses to start "
     "without it."
 )
 
-_logger = logging.getLogger("nbq_mcp")
+_logger = logging.getLogger("zelinqa_mcp")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="nbq-mcp",
+        prog="zelinqa-mcp",
         description=(
-            "MCP server for the Zelinqa NBQ API. Reads NBQ_API_KEY (required), "
-            "NBQ_BASE_URL, NBQ_TIMEOUT_SECONDS and NBQ_MAX_RETRIES from the environment."
+            "MCP server for the Zelinqa NBQ API. Reads ZELINQA_API_KEY (required), "
+            "ZELINQA_BASE_URL, ZELINQA_TIMEOUT_SECONDS and ZELINQA_MAX_RETRIES from the environment."
         ),
     )
     parser.add_argument(
@@ -62,7 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="WARNING",
         help="Log level, written to stderr (default: WARNING).",
     )
-    parser.add_argument("--version", action="version", version=f"nbq-mcp {__version__}")
+    parser.add_argument("--version", action="version", version=f"zelinqa-mcp {__version__}")
+    parser.add_argument(
+        "--advanced",
+        action="store_true",
+        help="Expose low-level API IDs instead of the business tools.",
+    )
     return parser
 
 
@@ -95,8 +100,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(MISSING_KEY_MESSAGE, file=sys.stderr)
         return EXIT_MISSING_API_KEY
 
-    server = build_server(log_level=args.log_level)
-    _logger.info("nbq-mcp %s serving on transport %s", __version__, args.transport)
+    if args.transport != "stdio":
+        print(
+            "streamable-http is disabled: use stdio, isolated per trusted host/user. Authentication and session isolation are required before hosting over HTTP.",
+            file=sys.stderr,
+        )
+        return 2
+    server = build_server(log_level=args.log_level, advanced=args.advanced)
+    _logger.info("zelinqa-mcp %s serving on transport %s", __version__, args.transport)
     run_server(server, args.transport, host=args.host, port=args.port)
     return 0
 

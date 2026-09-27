@@ -11,7 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from nbq.models import FeedbackResponse, NextResponse, SessionStateResponse
+from zelinqa.models import FeedbackResponse, NextResponse, SessionStateResponse
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,7 @@ class FakeRuntimeClient:
         client_reference: str | None = None,
         max_turns: int | None = None,
         initial_history: Any = None,
+        idempotency_key: str | None = None,
     ) -> Any:
         return self._resolve(
             "create_session",
@@ -79,6 +80,7 @@ class FakeRuntimeClient:
         context_update: Any = None,
         client_updates: Any = None,
         selection: Any = None,
+        idempotency_key: str | None = None,
     ) -> Any:
         return self._resolve(
             "next",
@@ -99,6 +101,7 @@ class FakeRuntimeClient:
         state_version: int,
         context_update: Any = None,
         client_updates: Any = None,
+        idempotency_key: str | None = None,
     ) -> Any:
         return self._resolve(
             "apply_events",
@@ -120,6 +123,7 @@ class FakeRuntimeClient:
         result: str,
         label: str | None = None,
         metadata: Any = None,
+        idempotency_key: str | None = None,
     ) -> Any:
         return self._resolve(
             "submit_feedback",

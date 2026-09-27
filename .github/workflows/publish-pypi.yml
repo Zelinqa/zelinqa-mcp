@@ -1,10 +1,10 @@
-name: Publish nbq-mcp to PyPI
+name: Publish zelinqa-mcp to PyPI
 
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Type publish-nbq-mcp to confirm the public PyPI release'
+        description: 'Type publish-zelinqa-mcp to confirm the public PyPI release'
         required: true
         type: string
 
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-and-test:
-    if: github.ref == 'refs/heads/main' && inputs.confirm == 'publish-nbq-mcp'
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'publish-zelinqa-mcp'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +28,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --group dev --locked
+
+      - name: Require the published SDK dependency
+        run: python -c "import tomllib; p=tomllib.load(open('pyproject.toml','rb')); assert 'zelinqa' not in p.get('tool',{}).get('uv',{}).get('sources',{}), 'Publish zelinqa to PyPI and remove the review-only source override first'"
 
       - name: Lint
         run: uv run ruff check src tests
@@ -50,7 +53,7 @@ jobs:
       - name: Upload immutable distributions
         uses: actions/upload-artifact@v4
         with:
-          name: nbq-mcp-distributions
+          name: zelinqa-mcp-distributions
           path: dist/
           if-no-files-found: error
           retention-days: 7
@@ -65,7 +68,7 @@ jobs:
       - name: Download distributions built by the unprivileged job
         uses: actions/download-artifact@v4
         with:
-          name: nbq-mcp-distributions
+          name: zelinqa-mcp-distributions
           path: dist/
 
       - name: Publish with PyPI Trusted Publishing

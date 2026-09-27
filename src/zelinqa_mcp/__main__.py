@@ -1,4 +1,4 @@
-"""Allow `python -m nbq_mcp` in addition to the `nbq-mcp` console script."""
+"""Allow `python -m zelinqa_mcp` in addition to the `zelinqa-mcp` console script."""
 
 from __future__ import annotations
 
