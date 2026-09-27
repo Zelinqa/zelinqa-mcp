@@ -25,3 +25,31 @@ in protected secret settings. Do not publish a placeholder merely to reserve a n
 The skill lives at `skills/zelinqa` and is included in the source distribution.
 It can be distributed from the same repository; it does not require publishing a
 second Python package. HTTP hosting is not part of this release.
+
+## Official MCP Registry
+
+PyPI distributes the executable package. The [MCP Registry](https://registry.modelcontextprotocol.io)
+lists metadata pointing to that package; it does not host another copy of the server.
+
+Before building a release, keep the versions in `pyproject.toml` and `server.json`
+aligned. Preserve the README ownership marker
+`<!-- mcp-name: io.github.Zelinqa/zelinqa-mcp -->`: the registry checks it in the
+published PyPI description. The manifest advertises only local stdio transport and
+requires a host-supplied secret API key; it must not contain credentials.
+
+After verifying the package on PyPI, install the official `mcp-publisher` CLI and
+run these commands from the repository root:
+
+```bash
+mcp-publisher validate
+mcp-publisher login github
+mcp-publisher publish
+```
+
+GitHub authentication for the `io.github.Zelinqa` namespace requires an owner of
+the organization. Complete the device authorization directly in GitHub; do not
+copy authentication tokens into source or release logs. Verify the registered
+name and version through the registry API after publication.
+
+See the official [quickstart](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/quickstart.mdx)
+and [PyPI verification requirements](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/package-types.mdx).

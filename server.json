@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Zelinqa/zelinqa-mcp",
+  "title": "Zelinqa MCP",
+  "description": "Goal-oriented conversations and next-question selection through the Zelinqa API.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/Zelinqa/zelinqa-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://docs.zelinqa.ai",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "zelinqa-mcp",
+      "version": "1.0.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ZELINQA_API_KEY",
+          "description": "Runtime key for a published Zelinqa domain, supplied by the host.",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
