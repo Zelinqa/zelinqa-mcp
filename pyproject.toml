@@ -49,7 +49,7 @@ packages = ["src/zelinqa_mcp"]
 # Review-only override until the Zelinqa SDK is published on PyPI.
 [tool.uv.sources]
 # Exact tested commit, never a moving branch. Remove before MCP publication.
-zelinqa = { git = "https://github.com/Zelinqa/zelinqa-sdk.git", rev = "8b694e1c460c663faeb49f122af30d2377268b0f" }
+zelinqa = { git = "https://github.com/Zelinqa/zelinqa-sdk.git", rev = "48987c60f641025d6e2e4a919ff130fc5c73785b" }
 
 [dependency-groups]
 dev = [

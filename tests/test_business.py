@@ -2,6 +2,7 @@ import copy
 import json
 
 import anyio
+import pytest
 from mcp.client import Client
 from zelinqa.errors import ZelinqaStateVersionConflictError
 
@@ -259,6 +260,72 @@ async def test_prompts_and_resource_are_readable_without_api_calls():
         assert str(resources.resources[0].uri) == "zelinqa://guide"
         resource = await client.read_resource("zelinqa://guide")
         assert resource.contents
+        assert not fake.calls
+
+
+@pytest.mark.parametrize("answer", [{}, {"outcome": "asked_answered"}, {"user_text": "   "}])
+async def test_open_answer_without_actual_words_rejected_before_runtime_call(answer):
+    fake = fixture_client()
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
+        result = await client.call_tool("zelinqa_answer", {"conversation": "demo", **answer})
+        assert "requires user_text" in error_text(result)
+        assert len(fake.calls_to("next")) == 1
+
+
+@pytest.mark.parametrize("kind", ["open", "single_choice", "multiple_choice", "semi_open"])
+@pytest.mark.parametrize("outcome", ["asked_no_answer", "refused"])
+async def test_unanswered_outcome_accepted_without_text(kind, outcome):
+    decision = copy.deepcopy(DECISION_NORMALE)
+    decision["candidates"][0]["type"] = kind
+    fake = FakeRuntimeClient().queue("create_session", SESSION_NEUVE).queue("next", decision)
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
+        structured(
+            await client.call_tool("zelinqa_answer", {"conversation": "demo", "outcome": outcome})
+        )
+    turn = fake.calls_to("next")[-1].kwargs["previous_turn"]
+    assert len(fake.calls_to("next")) == 2
+    assert turn.outcome == outcome
+    assert turn.user_text is None
+
+
+@pytest.mark.parametrize(
+    "kind,answer",
+    [
+        ("open", {"user_text": "We need to qualify requests"}),
+        ("single_choice", {"choice_labels": ["Email"]}),
+        ("semi_open", {"choice_labels": ["Email"]}),
+        ("semi_open", {"choice_labels": ["Email"], "free_text": "Also by mail"}),
+    ],
+)
+async def test_valid_answer_forms_keep_the_business_loop(kind, answer):
+    decision = copy.deepcopy(DECISION_NORMALE)
+    decision["candidates"][0]["type"] = kind
+    decision["candidates"][0]["choices"] = [{"choice_id": "email", "label": "Email"}]
+    fake = FakeRuntimeClient().queue("create_session", SESSION_NEUVE).queue("next", decision)
+    async with Client(build_server(lambda: fake)) as client:
+        structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
+        result = structured(
+            await client.call_tool("zelinqa_answer", {"conversation": "demo", **answer})
+        )
+        assert "questions" in result and "turn_count" in result
+    assert len(fake.calls_to("next")) == 2
+
+
+async def test_answer_requirement_is_exposed_in_tool_and_guide():
+    fake = FakeRuntimeClient()
+    async with Client(build_server(lambda: fake)) as client:
+        tools = await client.list_tools()
+        description = next(t.description for t in tools.tools if t.name == "zelinqa_answer")
+        resource = await client.read_resource("zelinqa://guide")
+        for text in (description, resource.contents[0].text):
+            assert "user_text" in text
+            assert "asked_no_answer" in text
+            assert "refused" in text
         assert not fake.calls
 
 

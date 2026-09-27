@@ -5,6 +5,8 @@
 - Rename distribution, executable and environment variables to Zelinqa.
 - Default business tools hide API identifiers and preserve independent named conversations.
 - Resolve answer choice labels with the official SDK; report the question actually asked.
+- Require the person's text for open answers. Explicit no-answer and refusal
+  outcomes remain valid without text, as do choices for closed and semi-open questions.
 - Add two user-controlled prompts and the `zelinqa://guide` resource.
 - Add the portable `skills/zelinqa` agent skill.
 - Bound the local registry to 128 conversations; reject simultaneous mutations

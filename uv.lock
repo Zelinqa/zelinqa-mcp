@@ -1540,7 +1540,7 @@ wheels = [
 [[package]]
 name = "zelinqa"
 version = "1.0.0"
-source = { git = "https://github.com/Zelinqa/zelinqa-sdk.git?rev=8b694e1c460c663faeb49f122af30d2377268b0f#8b694e1c460c663faeb49f122af30d2377268b0f" }
+source = { git = "https://github.com/Zelinqa/zelinqa-sdk.git?rev=48987c60f641025d6e2e4a919ff130fc5c73785b#48987c60f641025d6e2e4a919ff130fc5c73785b" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
@@ -1569,7 +1569,7 @@ dev = [
 requires-dist = [
     { name = "mcp", specifier = ">=2.2,<3" },
     { name = "pydantic", specifier = ">=2.12,<3" },
-    { name = "zelinqa", git = "https://github.com/Zelinqa/zelinqa-sdk.git?rev=8b694e1c460c663faeb49f122af30d2377268b0f" },
+    { name = "zelinqa", git = "https://github.com/Zelinqa/zelinqa-sdk.git?rev=48987c60f641025d6e2e4a919ff130fc5c73785b" },
 ]
 
 [package.metadata.requires-dev]

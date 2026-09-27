@@ -49,6 +49,12 @@ GUIDE = """Zelinqa chooses the next useful question; you conduct the conversatio
 Use one unique conversation name per real conversation. start, then next_question.
 Ask the proposed question, wait for the person's response, then call answer.
 Answer with the actual text or exact choice labels, not invented identifiers.
+For an open question, user_text must contain the person's actual words. An outcome
+alone is rejected unless it is asked_no_answer or refused. These two outcomes need
+no text for any question type. Closed and semi-open questions accept choice labels
+alone; free_text may supplement a semi-open choice. Supplied text is analyzed by
+the engine. Choices or unanswered outcomes alone need no model call when no other
+text needs analysis. Never invent words to satisfy the open-answer requirement.
 Report the rank actually asked if it was not rank 1. Do not infer a successful
 outcome from a refusal or partial answer. Warnings and degraded results must remain visible.
 Use add_context for extra information. If the host already knows a confirmed value
@@ -202,7 +208,14 @@ def build_business_server(
 
     @server.tool(
         name="zelinqa_answer",
-        description="Report the person's actual answer to the pending question and get the next questions. No IDs needed. Use exact displayed choice labels; do not invent an outcome.",
+        description=(
+            "Report the person's actual answer to the pending question and get the next questions. "
+            "No IDs needed. Open questions require user_text with the person's actual words; "
+            "an outcome alone is rejected except asked_no_answer or refused. These two outcomes "
+            "need no text for any type. Closed and semi-open questions accept exact displayed "
+            "choice_labels alone; free_text may supplement a semi-open choice. "
+            "Do not invent words or an outcome."
+        ),
     )
     async def answer(
         conversation: Conversation,
