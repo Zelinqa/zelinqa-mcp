@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "zelinqa>=1.0.0,<2",
+    "zelinqa==1.0.0",
     # mcp 2.x: the server class is mcp.server.mcpserver.MCPServer and host/port are
     # transport options of run(). The major bound is deliberate.
     "mcp>=2.2,<3",
@@ -45,11 +45,6 @@ include = ["src/zelinqa_mcp", "examples", "skills", "README.md", "README.fr.md",
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zelinqa_mcp"]
-
-# Review-only override until the Zelinqa SDK is published on PyPI.
-[tool.uv.sources]
-# Exact tested commit, never a moving branch. Remove before MCP publication.
-zelinqa = { git = "https://github.com/Zelinqa/zelinqa-sdk.git", rev = "8b694e1c460c663faeb49f122af30d2377268b0f" }
 
 [dependency-groups]
 dev = [

@@ -84,9 +84,12 @@ Reformulating the published wording is fine; Zelinqa reattaches your text to its
 question. `decision_id`, `question_id` and `outcome` are optional helpers, not \
 identifiers to invent. For a choice question, send \
 `structured_answer: {"choice_ids": [...]}` with ids copied from the candidate's \
-`choices`: that path is deterministic and costs no LLM call. Omitting `user_text` \
-is allowed when a structured answer or `client_updates` carry the information; \
-the turn is then understood in reduced mode, reported by `degraded_reasons`.
+`choices`: choices alone need no model call when the question is unambiguous and \
+no other text needs analysis. For an open question, `user_text` must contain the \
+person's actual words; `client_updates` or context cannot replace it. An outcome \
+alone is rejected except `asked_no_answer` or `refused`, which need no text for \
+any type. Semi-open choices may include `free_text`. Supplied text is analyzed \
+by the engine; do not invent words to satisfy the open-answer requirement.
 
 Reading the response:
 - `candidates` are ordered, rank 1 first; ask the one you judge best, usually \
