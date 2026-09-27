@@ -1,5 +1,7 @@
 # Zelinqa MCP
 
+<!-- mcp-name: io.github.Zelinqa/zelinqa-mcp -->
+
 The official MCP adapter for goal-oriented question selection. The model handles
 the conversation; the SDK handles session IDs, pending decisions and state versions.
 
@@ -11,7 +13,13 @@ MCP host → zelinqa-mcp → Python SDK zelinqa → api.zelinqa.ai
 
 ## Start
 
-Once available on PyPI, run `uvx zelinqa-mcp`. To run from source:
+Run the published package:
+
+```bash
+uvx zelinqa-mcp
+```
+
+To run from source:
 
 ```bash
 git clone https://github.com/Zelinqa/zelinqa-mcp.git
@@ -26,7 +34,7 @@ Never paste keys into a chat, repository or report. Host examples are in
 
 | Environment variable | Purpose |
 |---|---|
-| `ZELINQA_API_KEY` | Required runtime key, scoped to one Zelinqa |
+| `ZELINQA_API_KEY` | Required runtime key, scoped to one published domain |
 | `ZELINQA_BASE_URL` | Default `https://api.zelinqa.ai` |
 | `ZELINQA_TIMEOUT_SECONDS` | Per-attempt timeout, default 30 seconds |
 | `ZELINQA_MAX_RETRIES` | Retry count, default 2 |
