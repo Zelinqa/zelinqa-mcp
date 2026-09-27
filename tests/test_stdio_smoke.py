@@ -24,9 +24,13 @@ async def test_default_stdio_surface_and_network_error() -> None:
     )
     async with Client(parameters) as client:
         tools = await client.list_tools()
-        assert len(tools.tools) == 8
-        assert len((await client.list_prompts()).prompts) == 2
-        assert (await client.read_resource("zelinqa://guide")).contents
+        assert len(tools.tools) == 7
+        assert "zelinqa_answer" not in {t.name for t in tools.tools}
+        prompts = (await client.list_prompts()).prompts
+        assert [p.name for p in prompts] == ["zelinqa_integration_check"]
+        assert not prompts[0].arguments
+        resource = await client.read_resource("zelinqa://guide")
+        assert resource.contents[0].text == client.instructions
 
         result = await client.call_tool("zelinqa_start", {"conversation": "stdio-smoke"})
         assert result.is_error is True

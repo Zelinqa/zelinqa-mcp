@@ -11,14 +11,25 @@ de question et de décision ainsi que la version de l'état.
 
 | Outil | Fonction |
 |---|---|
-| `zelinqa_start` | Démarrer une conversation nommée |
-| `zelinqa_next_question` | Obtenir ou retrouver la question en attente |
-| `zelinqa_answer` | Envoyer la réponse réelle et obtenir la suite |
+| `zelinqa_start` | Démarrer ou retrouver une conversation nommée et sa première question ou la question en attente |
+| `zelinqa_next_question` | Envoyer la réponse et obtenir la suite ; sans réponse, réafficher la question en attente sans consommer de tour |
 | `zelinqa_add_context` | Ajouter un résumé de contexte |
 | `zelinqa_adjust` | Appliquer des données confirmées ou des statuts sans consommer de tour |
 | `zelinqa_status` | Relire la progression et la question en attente |
 | `zelinqa_feedback` | Enregistrer le résultat métier observé |
 | `zelinqa_forget` | Libérer la mémoire locale, sans supprimer les données serveur |
+
+La boucle utilise sept outils métier : `zelinqa_start` renvoie directement la
+première question. La poser, attendre la réponse, puis appeler
+`zelinqa_next_question` avec les mots de la personne ou les libellés exacts des
+choix. Répéter jusqu'à l'arrêt ou l'atteinte de l'objectif, puis déclarer le vrai
+résultat avec `zelinqa_feedback`. Réutiliser un nom ne crée pas une autre session.
+
+Une question ouverte exige `user_text`, sauf `outcome: refused` ou
+`outcome: asked_no_answer`. Les questions fermées et semi-ouvertes acceptent
+`choice_labels` ; `free_text` peut compléter un choix semi-ouvert.
+Sans champ de réponse, la question est seulement réaffichée. Une réponse invalide
+rejetée localement peut être corrigée sans resynchronisation ni appel API.
 
 Une fois disponible sur PyPI : `uvx zelinqa-mcp`. Depuis les sources :
 `uv run zelinqa-mcp`. Configurer la clé runtime dans `ZELINQA_API_KEY` côté hôte,
@@ -38,8 +49,8 @@ Il ne faut pas envoyer deux réponses simultanément pour la même conversation.
 Après erreur ou interruption : `zelinqa_status`, puis vérifier où reprendre, sans
 réenvoyer aveuglément. Une limite de tours atteinte ne signifie pas un objectif atteint.
 
-Ressource : `zelinqa://guide`. Prompts sélectionnés par l'utilisateur :
-`zelinqa_conversation` et `zelinqa_integration_check`. Leur lecture n'appelle pas l'API.
+Le même guide sert d'instructions au serveur et de ressource `zelinqa://guide`.
+Un seul prompt, sans argument : `zelinqa_integration_check`. Leur lecture n'appelle pas l'API.
 Le [skill Zelinqa](skills/zelinqa/SKILL.md) est fourni pour les agents compatibles.
 
 Le mode `--advanced` conserve les six outils techniques avec identifiants explicites.

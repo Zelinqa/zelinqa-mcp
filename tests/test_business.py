@@ -4,13 +4,13 @@ import json
 import anyio
 import pytest
 from mcp.client import Client
-from zelinqa.errors import ZelinqaStateVersionConflictError
+from zelinqa.errors import ZelinqaConnectionError, ZelinqaStateVersionConflictError
 
-from zelinqa_mcp.business import build_business_server
+from zelinqa_mcp.business import GUIDE, INTEGRATION_CHECK, build_business_server
 from zelinqa_mcp.server import build_server
 
 from .conftest import error_text, structured
-from .contract_examples import DECISION_NORMALE, SESSION_NEUVE
+from .contract_examples import ARRET_SANS_QUESTION, DECISION_NORMALE, SESSION_NEUVE
 from .fakes import FakeRuntimeClient
 
 
@@ -20,19 +20,45 @@ def fixture_client():
     )
 
 
+def pending_state():
+    state = copy.deepcopy(SESSION_NEUVE)
+    state["pending_decision"] = {
+        "decision_id": DECISION_NORMALE["decision_id"],
+        "candidates": copy.deepcopy(DECISION_NORMALE["candidates"]),
+    }
+    for field in ("versions", "turn_count", "turns_remaining", "progress"):
+        state[field] = copy.deepcopy(DECISION_NORMALE[field])
+    return state
+
+
 async def test_default_tools_do_not_expose_ids_and_loop_has_no_extra_reads():
     fake = fixture_client()
     async with Client(build_server(lambda: fake)) as client:
         tools = await client.list_tools()
+        assert {t.name for t in tools.tools} == {
+            "zelinqa_start",
+            "zelinqa_next_question",
+            "zelinqa_add_context",
+            "zelinqa_adjust",
+            "zelinqa_status",
+            "zelinqa_feedback",
+            "zelinqa_forget",
+        }
         schemas = json.dumps([t.input_schema for t in tools.tools])
         for forbidden in ["session_id", "decision_id", "state_version", "question_id", "choice_id"]:
             assert forbidden not in schemas
         started = structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
-        assert started["questions"] == []
+        assert started["questions"][0]["text"]
+        assert len(fake.calls_to("create_session")) == 1
+        assert len(fake.calls_to("next")) == 1
         result = structured(
             await client.call_tool("zelinqa_next_question", {"conversation": "demo"})
         )
         assert result["questions"][0]["text"]
+        assert result == started
+        assert (
+            structured(await client.call_tool("zelinqa_start", {"conversation": "demo"})) == started
+        )
         assert "warnings" in result and "degraded_reasons" in result
         for hidden in ["session_id", "decision_id", "target_ids", "choice_id", "state_version"]:
             assert hidden not in json.dumps(result)
@@ -40,7 +66,7 @@ async def test_default_tools_do_not_expose_ids_and_loop_has_no_extra_reads():
         assert len(fake.calls_to("next")) == 1
         structured(
             await client.call_tool(
-                "zelinqa_answer", {"conversation": "demo", "user_text": "Pour mon salon"}
+                "zelinqa_next_question", {"conversation": "demo", "user_text": "Pour mon salon"}
             )
         )
         call = fake.calls_to("next")[-1].kwargs
@@ -51,11 +77,11 @@ async def test_default_tools_do_not_expose_ids_and_loop_has_no_extra_reads():
 
 
 async def test_adjust_maps_business_updates_without_consuming_a_turn():
-    updated = copy.deepcopy(SESSION_NEUVE)
-    updated["versions"]["state_version"] = 1
+    updated = pending_state()
+    updated["versions"]["state_version"] += 1
     updated["progress"]["objective"]["client_override"] = {"status": "achieved"}
     updated["progress"]["objective"]["effective_status"] = "covered"
-    fake = FakeRuntimeClient().queue("create_session", SESSION_NEUVE).queue("apply_events", updated)
+    fake = fixture_client().queue("apply_events", updated)
 
     async with Client(build_server(lambda: fake)) as client:
         structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
@@ -79,12 +105,12 @@ async def test_adjust_maps_business_updates_without_consuming_a_turn():
             )
         )
 
-    assert result["turn_count"] == 0
+    assert result["turn_count"] == DECISION_NORMALE["turn_count"]
     assert result["progress"]["effective_status"] == "covered"
     assert "state_version" not in json.dumps(result)
-    assert not fake.calls_to("next")
+    assert len(fake.calls_to("next")) == 1
     sent = fake.calls_to("apply_events")[0].kwargs
-    assert sent["state_version"] == 0
+    assert sent["state_version"] == DECISION_NORMALE["versions"]["state_version"]
     assert sent["context_update"] is None
     assert sent["client_updates"] == {
         "dimensions": [
@@ -134,7 +160,7 @@ async def test_adjust_preserves_a_pending_question_in_the_returned_view():
 
 
 async def test_adjust_rejects_missing_or_ambiguous_updates_before_api_call():
-    fake = FakeRuntimeClient().queue("create_session", SESSION_NEUVE)
+    fake = fixture_client()
     async with Client(build_server(lambda: fake)) as client:
         structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
         for arguments in [{}, {"dimensions": [{"id": "so_budget", "status": "excluded"}] * 2}]:
@@ -156,11 +182,12 @@ async def test_adjust_conflict_requires_refresh_before_retry():
     conflict = ZelinqaStateVersionConflictError(
         "session has changed", status_code=409, code="state_version_conflict"
     )
-    refreshed = copy.deepcopy(SESSION_NEUVE)
-    refreshed["versions"]["state_version"] = 2
+    refreshed = pending_state()
+    refreshed["versions"]["state_version"] += 1
     fake = (
         FakeRuntimeClient()
         .queue("create_session", SESSION_NEUVE)
+        .queue("next", DECISION_NORMALE)
         .queue("apply_events", conflict, refreshed)
         .queue("get_session", refreshed)
     )
@@ -176,7 +203,7 @@ async def test_adjust_conflict_requires_refresh_before_retry():
         structured(await client.call_tool("zelinqa_adjust", arguments))
 
     assert len(fake.calls_to("apply_events")) == 2
-    assert [call.kwargs["state_version"] for call in fake.calls_to("apply_events")] == [0, 2]
+    assert [call.kwargs["state_version"] for call in fake.calls_to("apply_events")] == [4, 5]
 
 
 async def test_capacity_no_silent_eviction_and_forget_not_delete():
@@ -210,7 +237,7 @@ async def test_two_conversations_never_mix():
         for name in ["a", "b"]:
             structured(
                 await client.call_tool(
-                    "zelinqa_answer", {"conversation": name, "user_text": "Hello"}
+                    "zelinqa_next_question", {"conversation": name, "user_text": "Hello"}
                 )
             )
         answers = fake.calls_to("next")[-2:]
@@ -221,19 +248,27 @@ async def test_two_conversations_never_mix():
         ]
 
 
-async def test_invalid_answer_requires_refresh_and_does_not_send():
-    fake = fixture_client().queue("get_session", SESSION_NEUVE)
+async def test_invalid_answer_can_be_corrected_without_refresh_or_state_loss():
+    fake = fixture_client()
     async with Client(build_server(lambda: fake)) as client:
-        await client.call_tool("zelinqa_start", {"conversation": "demo"})
-        assert "No pending" in error_text(
-            await client.call_tool("zelinqa_answer", {"conversation": "demo", "user_text": "Hi"})
+        first = structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        assert "requires user_text" in error_text(
+            await client.call_tool(
+                "zelinqa_next_question", {"conversation": "demo", "outcome": "asked_answered"}
+            )
         )
-        assert not fake.calls_to("next")
-        assert "refresh_required" in error_text(
-            await client.call_tool("zelinqa_next_question", {"conversation": "demo"})
+        assert len(fake.calls_to("next")) == 1
+        assert (
+            structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
+            == first
         )
-        structured(await client.call_tool("zelinqa_status", {"conversation": "demo"}))
-        structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
+        structured(
+            await client.call_tool(
+                "zelinqa_next_question", {"conversation": "demo", "user_text": "Hi"}
+            )
+        )
+        assert len(fake.calls_to("next")) == 2
+        assert not fake.calls_to("get_session")
 
 
 async def test_host_resumes_by_environment_not_model_id(monkeypatch):
@@ -250,26 +285,27 @@ async def test_prompts_and_resource_are_readable_without_api_calls():
     fake = FakeRuntimeClient()
     async with Client(build_server(lambda: fake)) as client:
         prompts = await client.list_prompts()
-        assert {p.name for p in prompts.prompts} == {
-            "zelinqa_conversation",
-            "zelinqa_integration_check",
-        }
-        prompt = await client.get_prompt("zelinqa_conversation")
-        assert prompt.messages
+        assert {p.name for p in prompts.prompts} == {"zelinqa_integration_check"}
+        assert not prompts.prompts[0].arguments
+        prompt = await client.get_prompt("zelinqa_integration_check")
+        assert prompt.messages[0].content.text == INTEGRATION_CHECK
         resources = await client.list_resources()
         assert str(resources.resources[0].uri) == "zelinqa://guide"
         resource = await client.read_resource("zelinqa://guide")
-        assert resource.contents
+        assert resource.contents[0].text == GUIDE
+        assert client.instructions == GUIDE
         assert not fake.calls
 
 
-@pytest.mark.parametrize("answer", [{}, {"outcome": "asked_answered"}, {"user_text": "   "}])
+@pytest.mark.parametrize(
+    "answer", [{"outcome": "asked_answered"}, {"user_text": "   "}, {"assistant_text": "Question?"}]
+)
 async def test_open_answer_without_actual_words_rejected_before_runtime_call(answer):
     fake = fixture_client()
     async with Client(build_server(lambda: fake)) as client:
         structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
         structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
-        result = await client.call_tool("zelinqa_answer", {"conversation": "demo", **answer})
+        result = await client.call_tool("zelinqa_next_question", {"conversation": "demo", **answer})
         assert "requires user_text" in error_text(result)
         assert len(fake.calls_to("next")) == 1
 
@@ -284,7 +320,9 @@ async def test_unanswered_outcome_accepted_without_text(kind, outcome):
         structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
         structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
         structured(
-            await client.call_tool("zelinqa_answer", {"conversation": "demo", "outcome": outcome})
+            await client.call_tool(
+                "zelinqa_next_question", {"conversation": "demo", "outcome": outcome}
+            )
         )
     turn = fake.calls_to("next")[-1].kwargs["previous_turn"]
     assert len(fake.calls_to("next")) == 2
@@ -310,7 +348,7 @@ async def test_valid_answer_forms_keep_the_business_loop(kind, answer):
         structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
         structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
         result = structured(
-            await client.call_tool("zelinqa_answer", {"conversation": "demo", **answer})
+            await client.call_tool("zelinqa_next_question", {"conversation": "demo", **answer})
         )
         assert "questions" in result and "turn_count" in result
     assert len(fake.calls_to("next")) == 2
@@ -320,10 +358,10 @@ async def test_answer_requirement_is_exposed_in_tool_and_guide():
     fake = FakeRuntimeClient()
     async with Client(build_server(lambda: fake)) as client:
         tools = await client.list_tools()
-        description = next(t.description for t in tools.tools if t.name == "zelinqa_answer")
+        description = next(t.description for t in tools.tools if t.name == "zelinqa_next_question")
         resource = await client.read_resource("zelinqa://guide")
         for text in (description, resource.contents[0].text):
-            assert "user_text" in text
+            assert "person's words" in text
             assert "asked_no_answer" in text
             assert "refused" in text
         assert not fake.calls
@@ -334,8 +372,9 @@ async def test_same_conversation_concurrent_requests_are_rejected():
 
     class SlowClient(FakeRuntimeClient):
         async def next(self, *args, **kwargs):
-            entered.set()
-            await release.wait()
+            if kwargs.get("previous_turn") is not None:
+                entered.set()
+                await release.wait()
             return await super().next(*args, **kwargs)
 
     fake = SlowClient().queue("create_session", SESSION_NEUVE).queue("next", DECISION_NORMALE)
@@ -343,7 +382,11 @@ async def test_same_conversation_concurrent_requests_are_rejected():
         await client.call_tool("zelinqa_start", {"conversation": "demo"})
 
         async def first():
-            structured(await client.call_tool("zelinqa_next_question", {"conversation": "demo"}))
+            structured(
+                await client.call_tool(
+                    "zelinqa_next_question", {"conversation": "demo", "user_text": "Hi"}
+                )
+            )
 
         async with anyio.create_task_group() as group:
             group.start_soon(first)
@@ -352,6 +395,139 @@ async def test_same_conversation_concurrent_requests_are_rejected():
                 assert "conversation_busy" in error_text(
                     await client.call_tool("zelinqa_next_question", {"conversation": "demo"})
                 )
+                assert "conversation_busy" in error_text(
+                    await client.call_tool("zelinqa_start", {"conversation": "demo"})
+                )
             finally:
                 release.set()
+        assert len(fake.calls_to("next")) == 2
+
+
+async def test_answer_without_pending_question_is_an_error_and_stop_is_cached():
+    fake = (
+        FakeRuntimeClient()
+        .queue("create_session", SESSION_NEUVE)
+        .queue("next", ARRET_SANS_QUESTION)
+    )
+    async with Client(build_server(lambda: fake)) as client:
+        args = {"conversation": "demo"}
+        stopped = structured(await client.call_tool("zelinqa_start", args))
+        assert stopped["action"] == "stop"
+        assert "No pending question" in error_text(
+            await client.call_tool(
+                "zelinqa_next_question",
+                dict(args, user_text="Hello"),
+            )
+        )
+        for tool in ("zelinqa_start", "zelinqa_next_question"):
+            assert structured(await client.call_tool(tool, args)) == stopped
         assert len(fake.calls_to("next")) == 1
+
+
+@pytest.mark.parametrize("status", ["active", "completed", "stopped"])
+async def test_start_resumes_pending_or_terminal_state_without_next(monkeypatch, status):
+    monkeypatch.setenv("ZELINQA_SESSION_ID", "host-owned-id")
+    monkeypatch.setenv("ZELINQA_CONVERSATION", "demo")
+    state = pending_state()
+    state["status"] = status
+    if status != "active":
+        state["pending_decision"] = None
+    fake = FakeRuntimeClient().queue("get_session", state)
+    async with Client(build_server(lambda: fake)) as client:
+        args = {"conversation": "demo"}
+        first = structured(await client.call_tool("zelinqa_start", args))
+        assert bool(first["questions"]) == (status == "active")
+        assert structured(await client.call_tool("zelinqa_start", args)) == first
+        assert len(fake.calls_to("get_session")) == 1
+        assert not fake.calls_to("create_session") and not fake.calls_to("next")
+
+
+async def test_first_question_failure_keeps_created_handle_until_refresh():
+    fake = (
+        FakeRuntimeClient()
+        .queue("create_session", SESSION_NEUVE)
+        .queue("next", ZelinqaConnectionError("Network interrupted"), DECISION_NORMALE)
+        .queue("get_session", pending_state())
+    )
+    async with Client(build_server(lambda: fake)) as client:
+        args = {"conversation": "demo"}
+        assert "connection_error" in error_text(await client.call_tool("zelinqa_start", args))
+        assert "refresh_required" in error_text(await client.call_tool("zelinqa_start", args))
+        refreshed = structured(await client.call_tool("zelinqa_status", args))
+        assert structured(await client.call_tool("zelinqa_start", args)) == refreshed
+        assert len(fake.calls_to("create_session")) == 1
+        assert len(fake.calls_to("next")) == 1
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        {"choice_labels": ["Unknown"]},
+        {"choice_labels": []},
+        {"choice_labels": ["Dans le mois", "Dans le mois"]},
+        {"free_text": "Only free text"},
+        {"assistant_text": "Question?"},
+    ],
+)
+async def test_invalid_reply_fields_do_not_turn_into_a_cached_read(invalid):
+    fake = fixture_client()
+    async with Client(build_server(lambda: fake)) as client:
+        args = {"conversation": "demo"}
+        first = structured(await client.call_tool("zelinqa_start", args))
+        assert "invalid_request" in error_text(
+            await client.call_tool(
+                "zelinqa_next_question",
+                dict(args, candidate_rank=2, **invalid),
+            )
+        )
+        assert structured(await client.call_tool("zelinqa_next_question", args)) == first
+        structured(
+            await client.call_tool(
+                "zelinqa_next_question",
+                dict(
+                    args,
+                    candidate_rank=2,
+                    choice_labels=["Dans le mois"],
+                    assistant_text="Within a month?",
+                ),
+            )
+        )
+        assert len(fake.calls_to("next")) == 2
+        turn = fake.calls_to("next")[-1].kwargs["previous_turn"]
+        assert turn.question_id == "q_delai"
+        assert turn.assistant_text == "Within a month?"
+        assert turn.structured_answer.choice_ids == ["choice_1m"]
+        assert not fake.calls_to("get_session")
+
+
+async def test_start_first_question_does_not_block_other_conversations():
+    entered, release = anyio.Event(), anyio.Event()
+
+    class SlowFirst(FakeRuntimeClient):
+        async def next(self, session_id, **kwargs):
+            if session_id == "session-a":
+                entered.set()
+                await release.wait()
+            return await super().next(session_id, **kwargs)
+
+    a, b = copy.deepcopy(SESSION_NEUVE), copy.deepcopy(SESSION_NEUVE)
+    a["session_id"], b["session_id"] = "session-a", "session-b"
+    fake = SlowFirst().queue("create_session", a, b).queue("next", DECISION_NORMALE)
+    async with Client(build_server(lambda: fake)) as client:
+
+        async def first():
+            structured(await client.call_tool("zelinqa_start", {"conversation": "a"}))
+
+        async with anyio.create_task_group() as group:
+            group.start_soon(first)
+            await entered.wait()
+            try:
+                assert "conversation_busy" in error_text(
+                    await client.call_tool("zelinqa_start", {"conversation": "a"})
+                )
+                with anyio.fail_after(2):
+                    structured(await client.call_tool("zelinqa_start", {"conversation": "b"}))
+            finally:
+                release.set()
+        assert len(fake.calls_to("create_session")) == 2
+        assert len(fake.calls_to("next")) == 2

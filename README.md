@@ -41,28 +41,37 @@ stdout is reserved for MCP. Do not share one process across untrusted users.
 
 | Tool | What it does |
 |---|---|
-| `zelinqa_start` | Create a named conversation, or recover its local handle |
-| `zelinqa_next_question` | Get the first question, or redisplay the pending one without a new turn |
-| `zelinqa_answer` | Report actual text/choice labels and receive the next questions |
+| `zelinqa_start` | Start or recover a named conversation and return its first or pending question |
+| `zelinqa_next_question` | Record the person's reply and return the next question; without a reply, redisplay the pending question without a new turn |
 | `zelinqa_add_context` | Add a context summary without asking a question |
 | `zelinqa_adjust` | Apply confirmed data, dimension statuses or an objective override without consuming a turn |
 | `zelinqa_status` | Refresh progress and the pending question |
 | `zelinqa_feedback` | Record an observed business result: success, partial or failure |
 | `zelinqa_forget` | Free the local handle; does **not** delete API data |
 
-Example tool sequence:
+The seven business tools use this loop: start, ask the returned question, then
+pass the person's reply to `zelinqa_next_question`. Repeat until stopped or the
+objective is achieved, then report the real business result with `zelinqa_feedback`.
+
+Example tool sequence (the second call only redisplays the pending question):
 
 ```json
 {"tool":"zelinqa_start","arguments":{"conversation":"demo-42"}}
 {"tool":"zelinqa_next_question","arguments":{"conversation":"demo-42"}}
-{"tool":"zelinqa_answer","arguments":{"conversation":"demo-42","user_text":"For my living room"}}
+{"tool":"zelinqa_next_question","arguments":{"conversation":"demo-42","user_text":"For my living room"}}
 ```
 
 For a displayed choice use `choice_labels: ["Contemporary"]`. Use `candidate_rank`
 when asking a candidate other than rank 1. Session, decision and question IDs,
 as well as state versions, are not tool inputs.
-Never invent a successful outcome: `asked_answered` is a trusted declaration.
-Unlisted answers can be submitted as `user_text` for language-model analysis.
+An open question requires the person's words in `user_text`. An outcome alone is
+accepted only for `refused` or `asked_no_answer`, for any question type. Closed
+and semi-open questions accept exact `choice_labels`; semi-open choices can also
+include `free_text`. `assistant_text` records the wording actually asked.
+Never invent an answer or outcome. A reply with no pending question is an error.
+Invalid local answers leave the pending question unchanged and can be corrected
+without an API call. Calling without reply fields only redisplays the pending
+question; `candidate_rank` defaults to 1.
 
 When a CRM already knows an answer, use `zelinqa_adjust` instead of asking again.
 It accepts `dimensions: [{"id":"configured_dimension_id","status":"excluded"}]`,
@@ -102,10 +111,9 @@ management is not a MCP tool: use the SDK's separate configuration client/scopes
 
 | Item | Purpose |
 |---|---|
-| Resource `zelinqa://guide` | Conversation protocol and error handling |
-| Prompt `zelinqa_conversation` | User-selected guidance for a conversation |
+| Resource `zelinqa://guide` | The same guide supplied as the server's instructions |
 | Prompt `zelinqa_integration_check` | User-selected integration test checklist |
-| [Skill `zelinqa`](skills/zelinqa/SKILL.md) | Portable agent guidance for SDK/MCP integration |
+| [Skill `zelinqa`](skills/zelinqa/SKILL.md) | Short MCP workflow pointing to the guide as the reference |
 
 Reading these does not call the Zelinqa API or start a conversation. Copy the
 `skills/zelinqa` directory into your host's supported skills directory. No installation
