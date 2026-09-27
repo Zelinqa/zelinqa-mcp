@@ -78,7 +78,12 @@ async def test_business_conversation_over_real_stdio():
         assert contextual["questions"] == updated["questions"]
         assert contextual["turn_count"] == updated["turn_count"]
         current = _ok(await client.call_tool("zelinqa_status", args), "status")
-        assert current == contextual
+        # Summary-only context degrades that operation, not the persisted session.
+        assert contextual["degraded"] is True
+        assert current["degraded"] is False
+        assert {k: v for k, v in current.items() if k != "degraded"} == {
+            k: v for k, v in contextual.items() if k != "degraded"
+        }
         second_args = {"conversation": name + "-second"}
         second = _ok(await client.call_tool("zelinqa_start", second_args), "second start")
         assert second["questions"]
