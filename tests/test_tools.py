@@ -238,7 +238,7 @@ async def test_next_forwards_a_structured_answer_and_selection(
             selection={
                 "candidate_count": 2,
                 "allowed_question_types": ["single_choice", "multiple_choice"],
-                "sub_objectives": {"ids": ["so_besoin"], "mode": "restrict"},
+                "dimensions": {"ids": ["so_besoin"], "mode": "restrict"},
             },
         )
 
@@ -252,7 +252,7 @@ async def test_next_forwards_a_structured_answer_and_selection(
     assert sent["selection"] == {
         "candidate_count": 2,
         "allowed_question_types": ["single_choice", "multiple_choice"],
-        "sub_objectives": {"ids": ["so_besoin"], "mode": "restrict"},
+        "dimensions": {"ids": ["so_besoin"], "mode": "restrict"},
     }
 
 
@@ -285,7 +285,7 @@ async def test_stop_carries_no_candidate_and_a_stop_reason(client: FakeRuntimeCl
     assert result["decision_id"] is None
     assert result["candidates"] == []
     assert result["warnings"] == ["objective_achieved", "max_turns_reached"]
-    overrides = result["progress"]["sub_objectives"][2]["client_override"]
+    overrides = result["progress"]["dimensions"][2]["client_override"]
     assert overrides["status"] == "excluded"
 
 
@@ -650,7 +650,10 @@ async def test_unknown_session_is_readable(client: FakeRuntimeClient) -> None:
     assert "unknown_session: La session demandée est inconnue. (request_id=req_9007)" in message
 
 
-async def test_connection_failure_is_readable(client: FakeRuntimeClient) -> None:
+async def test_connection_failure_is_readable(
+    client: FakeRuntimeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ZELINQA_BASE_URL", "https://staging.example.test")
     client.queue("get_session", ZelinqaConnectionError("timed out after 3 attempts"))
 
     async with connect(client) as session:
@@ -658,7 +661,8 @@ async def test_connection_failure_is_readable(client: FakeRuntimeClient) -> None
 
     assert "connection_error" in message
     assert "timed out after 3 attempts" in message
-    assert "api.zelinqa.ai" in message
+    assert "ZELINQA_BASE_URL" in message
+    assert "api.zelinqa.ai" not in message
 
 
 async def test_the_api_key_never_reaches_a_tool_result(

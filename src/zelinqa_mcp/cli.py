@@ -1,4 +1,4 @@
-"""Command line entry point for the NBQ MCP server.
+"""Command line entry point for the Zelinqa MCP server.
 
 Logging goes to stderr only: on the stdio transport, stdout is the MCP channel
 and a stray print would corrupt the protocol. No request body, no conversation
@@ -23,7 +23,7 @@ EXIT_MISSING_API_KEY = 2
 
 MISSING_KEY_MESSAGE = (
     "zelinqa-mcp: ZELINQA_API_KEY is not set.\n"
-    "Set it to an NBQ API key carrying the `runtime` scope, for example in the "
+    "Set it to a Zelinqa API key carrying the `runtime` scope, for example in the "
     "`env` block of your MCP host configuration. The server refuses to start "
     "without it."
 )
@@ -35,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="zelinqa-mcp",
         description=(
-            "MCP server for the Zelinqa NBQ API. Reads ZELINQA_API_KEY (required), "
+            "MCP server for the Zelinqa API. Reads ZELINQA_API_KEY (required), "
             "ZELINQA_BASE_URL, ZELINQA_TIMEOUT_SECONDS and ZELINQA_MAX_RETRIES from the environment."
         ),
     )

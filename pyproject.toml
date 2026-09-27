@@ -1,13 +1,13 @@
 [project]
 name = "zelinqa-mcp"
 version = "1.0.0"
-description = "Official MCP server for the Zelinqa NBQ API"
+description = "Official MCP server for the Zelinqa API"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Zelinqa", email = "support@zelinqa.ai" }]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-keywords = ["zelinqa", "mcp", "model-context-protocol", "next-best-question", "zelinqa"]
+keywords = ["zelinqa", "mcp", "model-context-protocol", "next-best-question"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -19,7 +19,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "zelinqa>=1.0.0,<2",
+    "zelinqa==1.0.0",
     # mcp 2.x: the server class is mcp.server.mcpserver.MCPServer and host/port are
     # transport options of run(). The major bound is deliberate.
     "mcp>=2.2,<3",
@@ -30,8 +30,8 @@ dependencies = [
 [project.urls]
 Documentation = "https://docs.zelinqa.ai"
 Homepage = "https://zelinqa.ai"
-Repository = "https://github.com/Zelinqa/nbq-mcp"
-Issues = "https://github.com/Zelinqa/nbq-mcp/issues"
+Repository = "https://github.com/Zelinqa/zelinqa-mcp"
+Issues = "https://github.com/Zelinqa/zelinqa-mcp/issues"
 
 [project.scripts]
 zelinqa-mcp = "zelinqa_mcp.cli:main"
@@ -45,11 +45,6 @@ include = ["src/zelinqa_mcp", "examples", "skills", "README.md", "README.fr.md",
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zelinqa_mcp"]
-
-# Review-only override until the Zelinqa SDK is published on PyPI.
-[tool.uv.sources]
-# Exact tested commit, never a moving branch. Remove before MCP publication.
-zelinqa = { git = "https://github.com/Zelinqa/nbq-sdk.git", rev = "82fe9f30897dcb585be2d0a0ba2a72f1a5b25812" }
 
 [dependency-groups]
 dev = [
@@ -65,7 +60,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 # The live suite talks to the real API and is opt-in: ZELINQA_LIVE=1 plus -m live.
 addopts = '-ra -q --strict-markers -m "not live"'
-markers = ["live: hits the real NBQ API, requires ZELINQA_LIVE=1 and live keys"]
+markers = ["live: hits the real Zelinqa API, requires ZELINQA_LIVE=1 and live keys"]
 
 [tool.ruff]
 line-length = 100

@@ -14,12 +14,12 @@ We acknowledge the report, investigate it, and coordinate disclosure with the re
 
 ## What this server does with your data
 
-- The NBQ API key is read once from the `ZELINQA_API_KEY` environment variable of the server
+- The Zelinqa API key is read once from the `ZELINQA_API_KEY` environment variable of the server
   process. It is never written to a log, a tool result, an error message or a stack trace,
   and any configured key found in an outgoing string is replaced by `[redacted]`.
 - The server is a protocol adapter. It calls the official `zelinqa` Python SDK, which calls the
   public REST API at `https://api.zelinqa.ai`. It never opens a database connection, never
-  imports the NBQ engine, and exposes no selection score or semantic evidence.
+  imports the selection engine, and exposes no selection score or semantic evidence.
 - On the stdio transport, stdout is the MCP channel. Every log record goes to stderr, and
   the server logs no request body and no conversation content.
 - Session identifiers, question texts and answers pass through the tool results, because
@@ -32,5 +32,5 @@ We acknowledge the report, investigate it, and coordinate disclosure with the re
   management key in an MCP host is an unnecessary blast radius.
 - Never commit a key. `.env*` and `*.local` are ignored, and the example host
   configurations in `examples/` contain placeholders only.
-- Rotate a key from NBQ Studio as soon as it may have been exposed; a revoked key is
+- Rotate a key from Zelinqa Studio as soon as it may have been exposed; a revoked key is
   refused by the gateway on the next call.

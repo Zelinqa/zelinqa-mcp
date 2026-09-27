@@ -1,8 +1,8 @@
-"""The NBQ MCP server.
+"""The Zelinqa MCP server.
 
 Architecture, not negotiable:
 
-    MCP tool -> Python SDK `nbq` -> public REST API https://api.zelinqa.ai
+    MCP tool -> Python SDK `zelinqa` -> public REST API https://api.zelinqa.ai
 
 The server never speaks HTTP itself, never imports the engine, never touches a
 database, and never exposes a selection score.
@@ -37,7 +37,7 @@ from ._payloads import state_version_of, to_payload, with_state_version
 SERVER_NAME = "zelinqa"
 
 SERVER_INSTRUCTIONS = """\
-NBQ (Next Best Question) qualifies a conversation: you ask the questions, NBQ \
+Zelinqa qualifies a conversation: you ask the questions, Zelinqa \
 decides which question is worth asking next.
 
 Turn loop:
@@ -46,7 +46,7 @@ existing one back up).
 2. zelinqa_next with no previous_turn for the first turn. Ask the candidate of rank 1 \
 in your own words.
 3. zelinqa_next again with previous_turn = what you asked and what the user answered.
-4. Repeat. You decide when to stop: NBQ keeps proposing and reports \
+4. Repeat. You decide when to stop: Zelinqa keeps proposing and reports \
 max_turns_reached / objective_achieved in `warnings`. `action: "stop"` means no \
 question is left at all.
 5. zelinqa_submit_feedback once the conversation produced its real outcome.
@@ -54,16 +54,16 @@ question is left at all.
 Use zelinqa_apply_events to feed context or known data without consuming a turn."""
 
 _CREATE_SESSION_DESCRIPTION = """\
-Start an NBQ session for one conversation.
+Start a Zelinqa session for one conversation.
 
 Returns the initial session state, including `state_version` (0) and \
 `max_turns`. No question yet: call zelinqa_next next.
 
-`initial_history` is only for a conversation that started outside NBQ; it is \
+`initial_history` is only for a conversation that started outside Zelinqa; it is \
 consumed once to build the initial state and is never stored or returned."""
 
 _RESUME_SESSION_DESCRIPTION = """\
-Pick an existing NBQ session back up and re-learn its `state_version`.
+Pick an existing Zelinqa session back up and re-learn its `state_version`.
 
 Call this when you did not create the session in this process, after a crash, or \
 whenever you are unsure of the current `state_version`. The response carries \
@@ -80,37 +80,40 @@ First turn of a new session: call it with no `previous_turn`.
 Every later turn: pass `previous_turn` describing the turn that just happened —
   previous_turn = {"assistant_text": <the question you actually asked>, \
 "user_text": <the user's reply>}
-Reformulating the published wording is fine; NBQ reattaches your text to its \
+Reformulating the published wording is fine; Zelinqa reattaches your text to its \
 question. `decision_id`, `question_id` and `outcome` are optional helpers, not \
 identifiers to invent. For a choice question, send \
 `structured_answer: {"choice_ids": [...]}` with ids copied from the candidate's \
-`choices`: that path is deterministic and costs no LLM call. Omitting `user_text` \
-is allowed when a structured answer or `client_updates` carry the information; \
-the turn is then understood in reduced mode, reported by `degraded_reasons`.
+`choices`: choices alone need no model call when the question is unambiguous and \
+no other text needs analysis. For an open question, `user_text` must contain the \
+person's actual words; `client_updates` or context cannot replace it. An outcome \
+alone is rejected except `asked_no_answer` or `refused`, which need no text for \
+any type. Semi-open choices may include `free_text`. Supplied text is analyzed \
+by the engine; do not invent words to satisfy the open-answer requirement.
 
 Reading the response:
 - `candidates` are ordered, rank 1 first; ask the one you judge best, usually \
 rank 1. `text` is the published wording, `type` is open / single_choice / \
 multiple_choice / semi_open, `choices` is empty for an open question.
 - `warnings` may contain `max_turns_reached` (soft limit reached) or \
-`objective_achieved` (success conditions met). NBQ still proposes a question: \
-deciding whether to stop asking is YOUR call, not NBQ's.
+`objective_achieved` (success conditions met). Zelinqa still proposes a question: \
+deciding whether to stop asking is YOUR call, not Zelinqa's.
 - `action: "stop"` with `stop_reason: "no_question_available"` means no question \
 is left; there is nothing more to ask.
 - `state_version` is the version to send on the next mutation. It is tracked for \
 you, so you may omit `state_version`.
 
 Send `selection` only when you need to constrain this one call, for instance to \
-force closed questions or to stay inside a sub-objective."""
+force closed questions or to stay inside a dimension."""
 
 _APPLY_EVENTS_DESCRIPTION = """\
 Apply context or known data to the session without selecting a question.
 
 Same reducer as zelinqa_next, without the selection phase, so it does not consume a \
 turn and does not replace the pending decision. Use it to catch up on messages \
-that did not go through NBQ (`context_update`), to inject a value your own system \
+that did not go through Zelinqa (`context_update`), to inject a value your own system \
 already knows so the question is not asked (`client_updates.data`), to correct a \
-value, or to exclude a sub-objective. At least one of `context_update` or \
+value, or to exclude a dimension. At least one of `context_update` or \
 `client_updates` is required."""
 
 _GET_SESSION_DESCRIPTION = """\
@@ -146,7 +149,7 @@ StateVersion = Annotated[int | None, _STATE_VERSION_FIELD]
 
 
 class ZelinqaRuntimeClient(Protocol):
-    """The slice of `nbq.AsyncZelinqaClient` this server uses."""
+    """The slice of `zelinqa.AsyncZelinqaClient` this server uses."""
 
     async def create_session(
         self,
@@ -248,7 +251,7 @@ def default_client_factory() -> ZelinqaRuntimeClient:
         options["max_retries"] = max_retries
 
     # No cast: mypy checks structurally that the SDK client still satisfies
-    # ZelinqaRuntimeClient, so a signature drift in `nbq` fails the type check here.
+    # ZelinqaRuntimeClient, so a signature drift in `zelinqa` fails the type check here.
     return AsyncZelinqaClient(**options)
 
 
@@ -276,8 +279,8 @@ class _ServerState:
                         raise ToolError(AUTH_MESSAGE) from error
                     except ImportError as error:
                         raise ToolError(
-                            "sdk_unavailable: the official NBQ SDK could not be loaded "
-                            f"({error}). Reinstall zelinqa-mcp so that `nbq` 1.x is present."
+                            "sdk_unavailable: the official Zelinqa SDK could not be loaded "
+                            f"({error}). Reinstall zelinqa-mcp so that `zelinqa` 1.x is present."
                         ) from error
                     except (ValueError, ZelinqaAPIError, ZelinqaConnectionError) as error:
                         raise tool_error_for(error) from error
@@ -407,7 +410,9 @@ def build_advanced_server(
         ] = None,
         initial_history: Annotated[
             list[InitialHistoryItemInput] | None,
-            Field(default=None, max_length=100, description="Conversation started outside NBQ."),
+            Field(
+                default=None, max_length=100, description="Conversation started outside Zelinqa."
+            ),
         ] = None,
     ) -> dict[str, Any]:
         client = await state.client()

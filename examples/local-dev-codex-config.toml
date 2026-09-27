@@ -1,6 +1,6 @@
 # ~/.codex/config.toml — running from a checkout, before zelinqa-mcp is on PyPI
 [mcp_servers.zelinqa]
 command = "uv"
-args = ["run", "--directory", "/absolute/path/to/nbq-mcp", "zelinqa-mcp"]
+args = ["run", "--directory", "/absolute/path/to/zelinqa-mcp", "zelinqa-mcp"]
 # Keep your host's tool-approval policy; some calls create sessions and feedback.
 env = { ZELINQA_API_KEY = "PASTE_YOUR_RUNTIME_KEY_HERE" }
