@@ -37,18 +37,17 @@ aligned. Preserve the README ownership marker
 published PyPI description. The manifest advertises only local stdio transport and
 requires a host-supplied secret API key; it must not contain credentials.
 
-After verifying the package on PyPI, install the official `mcp-publisher` CLI and
-run these commands from the repository root:
+After verifying the package on PyPI, run the `Publish Zelinqa MCP to the MCP
+Registry` workflow from `main` with confirmation `publish-zelinqa-mcp-registry`.
+The `mcp-registry` GitHub environment must first be restricted to `main` and
+require a maintainer's approval. Do not run the workflow with an unprotected or
+automatically created environment: the registry grants organization-wide publish
+permission, not permission limited to this server.
 
-```bash
-mcp-publisher validate
-mcp-publisher login github
-mcp-publisher publish
-```
-
-GitHub authentication for the `io.github.Zelinqa` namespace requires an owner of
-the organization. Complete the device authorization directly in GitHub; do not
-copy authentication tokens into source or release logs. Verify the registered
+The workflow checks the published PyPI release and ownership marker, then uses
+GitHub Actions OIDC to authenticate as the repository owner. No permanent token
+or interactive device authorization is needed. It downloads a version-pinned
+publisher and verifies its SHA-256 checksum before use. Verify the registered
 name and version through the registry API after publication.
 
 See the official [quickstart](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/quickstart.mdx)
