@@ -1,0 +1,62 @@
+name: Publish Zelinqa MCP to the MCP Registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type publish-zelinqa-mcp-registry to confirm the registry listing'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify-package:
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'publish-zelinqa-mcp-registry'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify the release is available on PyPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_name="$(jq -r '.packages[0].identifier' server.json)"
+          package_version="$(jq -r '.version' server.json)"
+          test "$package_name" = 'zelinqa-mcp'
+          test "$(jq -r '.packages[0].version' server.json)" = "$package_version"
+          curl --fail --silent --show-error --retry 3 \
+            "https://pypi.org/pypi/${package_name}/${package_version}/json" \
+            | jq -e --arg name "$package_name" --arg version "$package_version" \
+              '(.info.name == $name) and (.info.version == $version) and
+               (.info.description | contains("<!-- mcp-name: io.github.Zelinqa/zelinqa-mcp -->")) and
+               any(.urls[]; (.packagetype == "bdist_wheel") and (.yanked == false))'
+
+  publish:
+    needs: verify-package
+    runs-on: ubuntu-latest
+    environment: mcp-registry
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install verified MCP publisher
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 \
+            --output mcp-publisher_linux_amd64.tar.gz \
+            https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          printf '%s  %s\n' \
+            'a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc' \
+            'mcp-publisher_linux_amd64.tar.gz' | sha256sum --check -
+          tar -xzf mcp-publisher_linux_amd64.tar.gz mcp-publisher
+
+      - name: Authenticate using GitHub Actions OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish registry metadata
+        run: ./mcp-publisher publish server.json
