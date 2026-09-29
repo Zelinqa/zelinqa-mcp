@@ -46,9 +46,11 @@ existing one back up).
 2. zelinqa_next with no previous_turn for the first turn. Ask the candidate of rank 1 \
 in your own words.
 3. zelinqa_next again with previous_turn = what you asked and what the user answered.
-4. Repeat. You decide when to stop: Zelinqa keeps proposing and reports \
-max_turns_reached / objective_achieved in `warnings`. `action: "stop"` means no \
-question is left at all.
+4. Repeat. Before `max_turns`, you decide when to stop: Zelinqa keeps proposing \
+and reports objective_achieved in `warnings`. `action: "stop"` ends the \
+conversation: `stop_reason` is max_turns_reached (the session reached \
+`max_turns`; later calls return the same stop) or no_question_available (no \
+question is left at all).
 5. zelinqa_submit_feedback once the conversation produced its real outcome.
 
 Use zelinqa_apply_events to feed context or known data without consuming a turn."""
@@ -95,11 +97,14 @@ Reading the response:
 - `candidates` are ordered, rank 1 first; ask the one you judge best, usually \
 rank 1. `text` is the published wording, `type` is open / single_choice / \
 multiple_choice / semi_open, `choices` is empty for an open question.
-- `warnings` may contain `max_turns_reached` (soft limit reached) or \
-`objective_achieved` (success conditions met). Zelinqa still proposes a question: \
-deciding whether to stop asking is YOUR call, not Zelinqa's.
-- `action: "stop"` with `stop_reason: "no_question_available"` means no question \
-is left; there is nothing more to ask.
+- `warnings` may contain `objective_achieved` (success conditions met). Zelinqa \
+still proposes a question: before `max_turns`, deciding whether to stop asking is \
+YOUR call, not Zelinqa's.
+- `action: "stop"` has no candidates. `stop_reason: "max_turns_reached"` means the \
+session reached `max_turns`: your previous turn was recorded, the session is \
+stopped and every later call returns the same stop. \
+`stop_reason: "no_question_available"` means no question is left. Either way, \
+there is nothing more to ask.
 - `state_version` is the version to send on the next mutation. It is tracked for \
 you, so you may omit `state_version`.
 

@@ -1539,20 +1539,20 @@ wheels = [
 
 [[package]]
 name = "zelinqa"
-version = "1.0.0"
+version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/32/2d19d8151eaf1df341048d0f48d6cae8dbbb4ea6e42bfafda6d019b88933/zelinqa-1.0.0.tar.gz", hash = "sha256:1fcec88a5aefb2de1273b76aff8abbecb58374d91ad2997e56e46bea49000ae9", size = 34164, upload-time = "2026-09-27T14:18:59.613Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/80/991a878ba1e7c7af4278eb5bb5cb004e6da5678247df34248bbb2f72f154/zelinqa-1.0.1.tar.gz", hash = "sha256:be55f1f84eea7949cabcd480c0f5a39b76a182233b2090e4a6ffba69258c7731", size = 29405, upload-time = "2026-09-29T18:48:28.659Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/2c/d0337763734533a51d45be3cbe3eaa34df515fafd364a2ff163d2f74632c/zelinqa-1.0.0-py3-none-any.whl", hash = "sha256:6e4535d59bd4b3bde520279681ca836787f493d75d6167c59a866e1c008eaee1", size = 37835, upload-time = "2026-09-27T14:18:58.338Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/9b/f91cc47d76b58585a0600f78dccbb620b512c89325b34f00fb9cfa2c26a6/zelinqa-1.0.1-py3-none-any.whl", hash = "sha256:7c0d99d36eda8cbdaea49f3c645f63fccf85493b82c5ecd60135ec377adf5577", size = 32924, upload-time = "2026-09-29T18:48:27.157Z" },
 ]
 
 [[package]]
 name = "zelinqa-mcp"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
@@ -1573,7 +1573,7 @@ dev = [
 requires-dist = [
     { name = "mcp", specifier = ">=2.2,<3" },
     { name = "pydantic", specifier = ">=2.12,<3" },
-    { name = "zelinqa", specifier = "==1.0.0" },
+    { name = "zelinqa", specifier = ">=1.0.1,<2" },
 ]
 
 [package.metadata.requires-dev]

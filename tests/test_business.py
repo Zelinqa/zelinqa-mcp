@@ -10,7 +10,12 @@ from zelinqa_mcp.business import GUIDE, INTEGRATION_CHECK, build_business_server
 from zelinqa_mcp.server import build_server
 
 from .conftest import error_text, structured
-from .contract_examples import ARRET_SANS_QUESTION, DECISION_NORMALE, SESSION_NEUVE
+from .contract_examples import (
+    ARRET_SANS_QUESTION,
+    DECISION_APRES_MAX_TURNS,
+    DECISION_NORMALE,
+    SESSION_NEUVE,
+)
 from .fakes import FakeRuntimeClient
 
 
@@ -422,6 +427,32 @@ async def test_answer_without_pending_question_is_an_error_and_stop_is_cached():
         for tool in ("zelinqa_start", "zelinqa_next_question"):
             assert structured(await client.call_tool(tool, args)) == stopped
         assert len(fake.calls_to("next")) == 1
+
+
+async def test_max_turns_stop_after_the_last_reply_is_final():
+    fake = (
+        FakeRuntimeClient()
+        .queue("create_session", SESSION_NEUVE)
+        .queue("next", DECISION_NORMALE, DECISION_APRES_MAX_TURNS)
+    )
+    async with Client(build_server(lambda: fake)) as client:
+        args = {"conversation": "demo"}
+        await client.call_tool("zelinqa_start", args)
+        stopped = structured(
+            await client.call_tool(
+                "zelinqa_next_question", dict(args, user_text="Autour de 2 000 euros.")
+            )
+        )
+        assert stopped["action"] == "stop"
+        assert stopped["stop_reason"] == "max_turns_reached"
+        assert stopped["questions"] == []
+        assert stopped["turns_remaining"] == 0
+        assert "No pending question" in error_text(
+            await client.call_tool("zelinqa_next_question", dict(args, user_text="Encore"))
+        )
+        for tool in ("zelinqa_start", "zelinqa_next_question"):
+            assert structured(await client.call_tool(tool, args)) == stopped
+        assert len(fake.calls_to("next")) == 2
 
 
 @pytest.mark.parametrize("status", ["active", "completed", "stopped"])

@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased — 1.0.0
+## 1.0.1 — Unreleased
+
+- Require `zelinqa>=1.0.1,<2`. That SDK version accepts the
+  `max_turns_reached` stop, as well as stop reasons and warnings added by later
+  API releases. With `zelinqa` 1.0.0, the response ending a session at
+  `max_turns` failed with a validation error.
+- Server instructions, tool descriptions, the conversation guide and the
+  READMEs describe the stop at `max_turns`: `action: "stop"` with
+  `stop_reason: "max_turns_reached"`, and later calls return the same stop.
+  `max_turns_reached` is no longer described as a warning.
+
+## 1.0.0 — 2026-09-27
 
 - Rename distribution, executable and environment variables to Zelinqa.
 - Default business tools hide API identifiers and preserve independent named conversations.
@@ -16,5 +27,3 @@
   of one conversation and require reconciliation after interrupted calls.
 - Keep the low-level tools available through `--advanced`.
 - Disable HTTP hosting pending authentication and tenant/session isolation.
-
-The package is prepared for publication, not yet published.

@@ -94,8 +94,9 @@ and reconcile before retrying. A question already pending is not recalculated by
 
 Results include question text, ranks, choice labels, objective progress and counters.
 Next-decision results also include warnings, stop reason and degraded-mode reasons.
-The full target/ID maps are deliberately absent. A turn-limit warning is **not**
-proof of objective completion.
+The full target/ID maps are deliberately absent. At `max_turns`, the result has
+`action: "stop"` and `stop_reason: "max_turns_reached"`, and later calls return the
+same stop. Reaching the turn limit is **not** proof of objective completion.
 
 ## State, retries and memory
 

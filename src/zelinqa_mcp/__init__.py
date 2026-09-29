@@ -7,7 +7,7 @@ Python SDK ``zelinqa``, which talks to the public REST API at
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 __all__ = ["__version__", "build_server"]
 
