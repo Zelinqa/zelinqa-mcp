@@ -57,7 +57,9 @@ The loop
    and returns the next question. Called without a reply, it returns the pending
    question again without consuming a turn.
 4. Repeat until action is "stop" or the objective is achieved, then
-   zelinqa_feedback with the real business result.
+   zelinqa_feedback with the real business result. At max_turns, action is
+   "stop" with stop_reason "max_turns_reached": the last reply is recorded and
+   later calls return the same stop.
 
 What the engine reads
 - An open question needs the person's words. An outcome alone is refused,

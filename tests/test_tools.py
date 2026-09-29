@@ -257,19 +257,47 @@ async def test_next_forwards_a_structured_answer_and_selection(
 
 
 async def test_warnings_and_degradation_reach_the_host(client: FakeRuntimeClient) -> None:
+    decision = {
+        **DECISION_NORMALE,
+        "warnings": ["objective_achieved", "constraints_relaxed"],
+        "degraded": True,
+        "degraded_reasons": ["missing_user_text"],
+    }
+    client.queue("next", decision)
+
+    async with connect(client) as session:
+        result = structured(
+            await call_tool(session, "zelinqa_next", session_id=SESSION_ID, state_version=3)
+        )
+
+    assert result["warnings"] == ["objective_achieved", "constraints_relaxed"]
+    assert result["degraded"] is True
+    assert result["degraded_reasons"] == ["missing_user_text"]
+    assert result["action"] == "ask"
+    assert result["candidates"]
+
+
+async def test_max_turns_stop_reaches_the_host(client: FakeRuntimeClient) -> None:
     client.queue("next", DECISION_APRES_MAX_TURNS)
 
     async with connect(client) as session:
         result = structured(
-            await call_tool(session, "zelinqa_next", session_id=SESSION_ID, state_version=20)
+            await call_tool(
+                session,
+                "zelinqa_next",
+                session_id=SESSION_ID,
+                state_version=20,
+                previous_turn={"user_text": "Plutôt dans les trois mois."},
+            )
         )
 
-    assert result["warnings"] == ["max_turns_reached"]
-    assert result["degraded"] is True
-    assert result["degraded_reasons"] == ["missing_user_text"]
-    assert result["action"] == "ask"
+    assert result["action"] == "stop"
+    assert result["stop_reason"] == "max_turns_reached"
+    assert result["decision_id"] is None
+    assert result["candidates"] == []
     assert result["turns_remaining"] == 0
-    assert result["candidates"]
+    assert result["warnings"] == []
+    assert result["state_version"] == 21
 
 
 async def test_stop_carries_no_candidate_and_a_stop_reason(client: FakeRuntimeClient) -> None:
@@ -284,7 +312,7 @@ async def test_stop_carries_no_candidate_and_a_stop_reason(client: FakeRuntimeCl
     assert result["stop_reason"] == "no_question_available"
     assert result["decision_id"] is None
     assert result["candidates"] == []
-    assert result["warnings"] == ["objective_achieved", "max_turns_reached"]
+    assert result["warnings"] == ["objective_achieved"]
     overrides = result["progress"]["dimensions"][2]["client_override"]
     assert overrides["status"] == "excluded"
 

@@ -141,23 +141,10 @@ DECISION_NORMALE: dict[str, Any] = {
 DECISION_APRES_MAX_TURNS: dict[str, Any] = {
     "request_id": "req_1003",
     "session_id": "ses_01J8Z",
-    "decision_id": "dec_8c11",
-    "action": "ask",
-    "stop_reason": None,
-    "candidates": [
-        {
-            "rank": 1,
-            "question_id": "q_delai",
-            "text": "À quelle période souhaitez-vous être livré ?",
-            "type": "single_choice",
-            "choices": [
-                {"choice_id": "choice_1m", "label": "Dans le mois"},
-                {"choice_id": "choice_3m", "label": "Dans les trois mois"},
-                {"choice_id": "choice_later", "label": "Plus tard"},
-            ],
-            "target_ids": ["delivery_window"],
-        }
-    ],
+    "decision_id": None,
+    "action": "stop",
+    "stop_reason": "max_turns_reached",
+    "candidates": [],
     "progress": {
         "objective": {
             "computed_status": "in_progress",
@@ -197,9 +184,9 @@ DECISION_APRES_MAX_TURNS: dict[str, Any] = {
     },
     "turn_count": 10,
     "turns_remaining": 0,
-    "warnings": ["max_turns_reached"],
-    "degraded": True,
-    "degraded_reasons": ["missing_user_text"],
+    "warnings": [],
+    "degraded": False,
+    "degraded_reasons": [],
     "versions": {"state_version": 21, "engine_version": "1.0.0", "api_version": "1.0"},
 }
 
@@ -250,9 +237,9 @@ ARRET_SANS_QUESTION: dict[str, Any] = {
             },
         ],
     },
-    "turn_count": 12,
-    "turns_remaining": 0,
-    "warnings": ["objective_achieved", "max_turns_reached"],
+    "turn_count": 7,
+    "turns_remaining": 8,
+    "warnings": ["objective_achieved"],
     "degraded": False,
     "degraded_reasons": [],
     "versions": {"state_version": 25, "engine_version": "1.0.0", "api_version": "1.0"},

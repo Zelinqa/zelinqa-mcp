@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Resolve the published SDK and other dependencies from the committed lockfile.
+      # Zelinqa resolves from the tested SDK commit until publication (PUBLISHING.md).
       - name: Install dependencies
         run: uv sync --group dev --locked
 

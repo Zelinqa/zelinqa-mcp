@@ -47,7 +47,9 @@ Le serveur conserve au maximum 128 conversations locales. Après redémarrage, l
 doit fournir `ZELINQA_SESSION_ID` et `ZELINQA_CONVERSATION` pour reprendre une session.
 Il ne faut pas envoyer deux réponses simultanément pour la même conversation.
 Après erreur ou interruption : `zelinqa_status`, puis vérifier où reprendre, sans
-réenvoyer aveuglément. Une limite de tours atteinte ne signifie pas un objectif atteint.
+réenvoyer aveuglément. À `max_turns`, la réponse porte `action: "stop"` et
+`stop_reason: "max_turns_reached"`, et les appels suivants renvoient le même arrêt.
+Une limite de tours atteinte ne signifie pas un objectif atteint.
 
 Le même guide sert d'instructions au serveur et de ressource `zelinqa://guide`.
 Un seul prompt, sans argument : `zelinqa_integration_check`. Leur lecture n'appelle pas l'API.
