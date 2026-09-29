@@ -1540,10 +1540,14 @@ wheels = [
 [[package]]
 name = "zelinqa"
 version = "1.0.1"
-source = { git = "https://github.com/Zelinqa/zelinqa-sdk.git?rev=db5d5a4c1f79c07a9338d8dd2dbe074f2d71b76c#db5d5a4c1f79c07a9338d8dd2dbe074f2d71b76c" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/88/80/991a878ba1e7c7af4278eb5bb5cb004e6da5678247df34248bbb2f72f154/zelinqa-1.0.1.tar.gz", hash = "sha256:be55f1f84eea7949cabcd480c0f5a39b76a182233b2090e4a6ffba69258c7731", size = 29405, upload-time = "2026-09-29T18:48:28.659Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/9b/f91cc47d76b58585a0600f78dccbb620b512c89325b34f00fb9cfa2c26a6/zelinqa-1.0.1-py3-none-any.whl", hash = "sha256:7c0d99d36eda8cbdaea49f3c645f63fccf85493b82c5ecd60135ec377adf5577", size = 32924, upload-time = "2026-09-29T18:48:27.157Z" },
 ]
 
 [[package]]
@@ -1569,7 +1573,7 @@ dev = [
 requires-dist = [
     { name = "mcp", specifier = ">=2.2,<3" },
     { name = "pydantic", specifier = ">=2.12,<3" },
-    { name = "zelinqa", git = "https://github.com/Zelinqa/zelinqa-sdk.git?rev=db5d5a4c1f79c07a9338d8dd2dbe074f2d71b76c" },
+    { name = "zelinqa", specifier = ">=1.0.1,<2" },
 ]
 
 [package.metadata.requires-dev]

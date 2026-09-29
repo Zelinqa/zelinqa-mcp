@@ -4,10 +4,9 @@ Merge and publication require maintainer approval.
 
 1. Verify that the Python **`zelinqa`** version required by `pyproject.toml`
    (currently `>=1.0.1,<2`) is available on PyPI.
-2. During review, `[tool.uv.sources].zelinqa` may pin the exact SDK Git commit
-   tested, never a moving branch or a developer-local path. Before releasing MCP,
-   remove that override, regenerate `uv.lock` against PyPI and rerun tests from a
-   clean checkout. The publication workflow refuses to run while the override exists.
+2. Resolve the SDK dependency from PyPI, with no Git or developer-local source
+   override. When updating it, regenerate `uv.lock` and rerun tests from a clean
+   checkout before releasing MCP.
 3. Configure a pending Trusted Publisher for **`zelinqa-mcp`** in PyPI with owner
    `Zelinqa`, repository `zelinqa-mcp`, workflow `publish-pypi.yml`, and the
    `pypi` environment.

@@ -46,11 +46,6 @@ include = ["src/zelinqa_mcp", "examples", "skills", "README.md", "README.fr.md",
 [tool.hatch.build.targets.wheel]
 packages = ["src/zelinqa_mcp"]
 
-# Review-only override until Zelinqa SDK 1.0.1 is published on PyPI.
-[tool.uv.sources]
-# Exact tested commit, never a moving branch. Remove before MCP publication.
-zelinqa = { git = "https://github.com/Zelinqa/zelinqa-sdk.git", rev = "db5d5a4c1f79c07a9338d8dd2dbe074f2d71b76c" }
-
 [dependency-groups]
 dev = [
     "mypy>=1.10",
