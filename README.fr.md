@@ -2,7 +2,7 @@
 
 Adaptateur MCP officiel pour mener une conversation guidée par les objectifs.
 Le SDK Python `zelinqa` est une dépendance. Voir [le guide complet](README.md)
-et [les prérequis de publication](PUBLISHING.md).
+et [les prérequis de publication](RELEASING.md).
 
 Le modèle manipule le texte des questions, les réponses, les libellés des choix et
 un nom de conversation. `zelinqa_adjust` utilise aussi les identifiants métier

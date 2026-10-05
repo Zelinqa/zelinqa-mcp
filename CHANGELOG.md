@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1 — Unreleased
+## 1.0.1 — 2026-09-29
 
 - Require `zelinqa>=1.0.1,<2`. That SDK version accepts the
   `max_turns_reached` stop, as well as stop reasons and warnings added by later
