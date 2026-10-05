@@ -197,4 +197,4 @@ Details, retry semantics and the test suites: [docs/operations.md](docs/operatio
 
 ## License
 
-Apache-2.0. Release prerequisites are in [PUBLISHING.md](PUBLISHING.md).
+Apache-2.0. Release steps are in [RELEASING.md](RELEASING.md).
