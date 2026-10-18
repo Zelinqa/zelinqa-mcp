@@ -17,5 +17,7 @@ first; it is the reference.
    `zelinqa_feedback` with the real result.
 
 `zelinqa_add_context`, `zelinqa_adjust` and `zelinqa_status` help along the way
-and consume no turn. Never invent an answer, an outcome, a value or an ID; keep
-warnings visible; never ask the person for a session ID or an API key.
+and consume no turn. The first two can replace the pending question: always ask
+the question returned by the last call. Never invent an answer, an outcome, a
+value or an ID; keep warnings visible; never ask the person for a session ID or
+an API key.

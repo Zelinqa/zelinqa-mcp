@@ -147,7 +147,7 @@ The model calls `zelinqa_start`, asks the returned question in its own words, pa
 ▶ zelinqa_feedback        {"conversation": "lead-42", "result": "success"}
 ```
 
-Calling `zelinqa_next_question` without a reply only redisplays the pending question. When a CRM already knows an answer, `zelinqa_adjust` records it without asking. The full answering rules are in [docs/operations.md](docs/operations.md).
+Calling `zelinqa_next_question` without a reply only redisplays the pending question. When a CRM already knows an answer, `zelinqa_adjust` records it without asking. `zelinqa_adjust` and `zelinqa_add_context` can replace the pending question, for example when the information it asked for is now known: always ask the question they return. The full answering rules are in [docs/operations.md](docs/operations.md).
 
 ## Tools
 

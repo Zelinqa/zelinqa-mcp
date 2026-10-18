@@ -53,7 +53,8 @@ conversation: `stop_reason` is max_turns_reached (the session reached \
 question is left at all).
 5. zelinqa_submit_feedback once the conversation produced its real outcome.
 
-Use zelinqa_apply_events to feed context or known data without consuming a turn."""
+Use zelinqa_apply_events to feed context or known data without consuming a turn. \
+It can replace the pending decision: ask the question it returns."""
 
 _CREATE_SESSION_DESCRIPTION = """\
 Start a Zelinqa session for one conversation.
@@ -84,7 +85,10 @@ Every later turn: pass `previous_turn` describing the turn that just happened â€
 "user_text": <the user's reply>}
 Reformulating the published wording is fine; Zelinqa reattaches your text to its \
 question. `decision_id`, `question_id` and `outcome` are optional helpers, not \
-identifiers to invent. For a choice question, send \
+identifiers to invent. If zelinqa_apply_events replaced the decision after you \
+asked its question, a `previous_turn` with the replaced `decision_id` is still \
+accepted once: the reply goes to that question if it is still a candidate, \
+otherwise it is read as context, without recording an outcome or consuming a turn. For a choice question, send \
 `structured_answer: {"choice_ids": [...]}` with ids copied from the candidate's \
 `choices`: choices alone need no model call when the question is unambiguous and \
 no other text needs analysis. For an open question, `user_text` must contain the \
@@ -112,10 +116,13 @@ Send `selection` only when you need to constrain this one call, for instance to 
 force closed questions or to stay inside a dimension."""
 
 _APPLY_EVENTS_DESCRIPTION = """\
-Apply context or known data to the session without selecting a question.
+Apply context or known data to the session without consuming a turn.
 
-Same reducer as zelinqa_next, without the selection phase, so it does not consume a \
-turn and does not replace the pending decision. Use it to catch up on messages \
+Same reducer as zelinqa_next. The pending decision is then recomputed on the \
+updated state, with the `selection` constraints of the zelinqa_next call that \
+proposed it. Same candidates: same `decision_id`. Otherwise `pending_decision` \
+carries a new decision, for instance when `client_updates.data` supplied the \
+information its question asked for: ask that one. Use it to catch up on messages \
 that did not go through Zelinqa (`context_update`), to inject a value your own system \
 already knows so the question is not asked (`client_updates.data`), to correct a \
 value, or to exclude a dimension. At least one of `context_update` or \

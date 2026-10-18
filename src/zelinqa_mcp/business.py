@@ -76,6 +76,11 @@ Also available, none consumes a turn
   an error or a conflict.
 - zelinqa_forget: free this process's memory; server data is kept.
 
+zelinqa_add_context and zelinqa_adjust can replace the pending question, for
+example when the information it asked for is now known. Always ask the
+question they return. If the person already answered a question that was
+replaced, send that answer with zelinqa_add_context, not zelinqa_next_question.
+
 Rules
 - Never invent an answer, an outcome, a value or an ID.
 - A refusal or an empty reply is reported as such, not as an answer.
@@ -96,9 +101,11 @@ customer conversation. Report each step as pass or fail with what you observed.
    same question still pending, no turn consumed.
 5. zelinqa_next_question with an outcome alone for an open question -> refused;
    the same call with the person's words -> accepted.
-6. zelinqa_add_context with one sentence -> same pending question, no turn consumed.
+6. zelinqa_add_context with one sentence unrelated to the pending question -> same
+   pending question, no turn consumed.
 7. zelinqa_adjust with a configured business ID -> progress reflects it, no turn
-   consumed. Skip if no ID is known, and say so.
+   consumed; if it is the information the pending question asks for, a different
+   question is returned. Skip if no ID is known, and say so.
 8. zelinqa_status -> matches the last reply.
 9. zelinqa_start with a second name -> an independent conversation; the first
    one is unchanged.
@@ -305,7 +312,11 @@ def build_business_server(
 
     @server.tool(
         name="zelinqa_add_context",
-        description="Report extra conversation context without asking a question or consuming a turn. This text may require language-model analysis.",
+        description=(
+            "Report extra conversation context without asking a question or consuming a turn. "
+            "This text may require language-model analysis. The pending question can change "
+            "as a result: ask the question returned."
+        ),
     )
     async def add_context(
         conversation: Conversation, summary: Annotated[str, Field(min_length=1, max_length=16000)]
@@ -323,7 +334,9 @@ def build_business_server(
         description=(
             "Apply confirmed business data, dimension statuses or an objective override "
             "without asking a question or consuming a turn. Use configured information "
-            "and dimension IDs; never invent values or mark an unverified result achieved."
+            "and dimension IDs; never invent values or mark an unverified result achieved. "
+            "The pending question can change, for example when it asked for data that is "
+            "now known: ask the question returned."
         ),
     )
     async def adjust(

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Document that `zelinqa_adjust` and `zelinqa_add_context` can replace the
+  pending question when the conversation state changes, for example when the
+  information it asked for becomes known. The returned view shows the
+  replacement and `zelinqa_next_question` attaches the next reply to it. The
+  guide, tool descriptions, READMEs and skill say to ask the returned question,
+  and to send an answer to a replaced question with `zelinqa_add_context`.
+- Add a test covering a replaced pending question after both tools.
+- In advanced mode, `zelinqa_apply_events` and `zelinqa_next` describe the
+  replaced `decision_id` that a `previous_turn` may still cite once.
+
 ## 1.0.1 — 2026-09-29
 
 - Require `zelinqa>=1.0.1,<2`. That SDK version accepts the

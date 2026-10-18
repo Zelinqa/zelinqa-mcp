@@ -41,8 +41,10 @@ Si le système connaît déjà une réponse, `zelinqa_adjust` accepte une donné
 (`id`, `status: achieved | not_achieved | excluded`) ou l'objectif
 (`achieved | not_achieved`). Utiliser les identifiants métier configurés, jamais
 des valeurs inventées. Une erreur de conflit exige `zelinqa_status` avant de réessayer.
-Une question déjà proposée n'est pas recalculée par `zelinqa_adjust` : vérifier
-la vue renvoyée, et appliquer de préférence les ajustements avant de demander la suite.
+`zelinqa_adjust` et `zelinqa_add_context` peuvent remplacer la question en attente,
+par exemple quand l'information qu'elle demandait est désormais connue : toujours
+poser la question renvoyée. Si la personne a déjà répondu à une question remplacée,
+transmettre cette réponse avec `zelinqa_add_context`, pas avec `zelinqa_next_question`.
 Le serveur conserve au maximum 128 conversations locales. Après redémarrage, l'hôte
 doit fournir `ZELINQA_SESSION_ID` et `ZELINQA_CONVERSATION` pour reprendre une session.
 Il ne faut pas envoyer deux réponses simultanément pour la même conversation.
