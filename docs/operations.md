@@ -32,9 +32,24 @@ It accepts:
 
 These are configured business IDs, not session or decision IDs. Use only verified
 information. `adjust` does not consume a turn and returns the usual business view.
-After a conflict, call `zelinqa_status` and reconcile before retrying. A question
-already pending is not recalculated by `adjust`: inspect the returned view and
-prefer adjusting before `zelinqa_next_question`.
+After a conflict, call `zelinqa_status` and reconcile before retrying.
+
+## When the pending question changes
+
+`zelinqa_adjust` and `zelinqa_add_context` update the conversation state, then
+the API recomputes the pending question on that state, without a model call:
+
+- if the same questions remain the best ones, the returned view is unchanged;
+- otherwise the returned view carries the new question. Supplying the
+  information that the pending question asked for is the common case: that
+  question is withdrawn;
+- if no question is left, the conversation stops.
+
+Always ask the question returned by the last call. Prefer applying known data
+before asking. If the person already answered a question that was then
+replaced, send that answer with `zelinqa_add_context`, not with
+`zelinqa_next_question`: the reply tool always attaches the answer to the
+question currently pending.
 
 ## What results contain
 
@@ -75,6 +90,12 @@ tools: `zelinqa_create_session`, `zelinqa_resume_session`, `zelinqa_next`,
 This mode intentionally exposes API identifiers and full state. Configuration
 management is not an MCP tool: use the SDK's separate configuration client and
 scopes.
+
+`zelinqa_apply_events` can return a new `pending_decision`, with a new
+`decision_id`. A `previous_turn` that still cites the replaced `decision_id` is
+accepted once by `zelinqa_next`: the reply goes to its question if that question
+is still a candidate, otherwise it is read as context, without recording an
+outcome or consuming a turn.
 
 ## Tests
 

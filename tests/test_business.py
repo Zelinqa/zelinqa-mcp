@@ -164,6 +164,57 @@ async def test_adjust_preserves_a_pending_question_in_the_returned_view():
     assert len(fake.calls_to("next")) == 1
 
 
+def replaced_state():
+    """State after `/events` replaced the pending decision with a different question."""
+    state = pending_state()
+    state["versions"]["state_version"] += 1
+    replacement = copy.deepcopy(DECISION_NORMALE["candidates"][1])
+    replacement["rank"] = 1
+    state["pending_decision"] = {"decision_id": "dec_8b31", "candidates": [replacement]}
+    return state
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [
+        ("zelinqa_adjust", {"data": [{"id": "annual_budget", "value": 2500}]}),
+        ("zelinqa_add_context", {"summary": "The budget is 2,500 euros."}),
+    ],
+)
+async def test_out_of_turn_update_returns_the_replacement_question(tool, arguments):
+    fake = (
+        fixture_client().queue("apply_events", replaced_state()).queue("next", ARRET_SANS_QUESTION)
+    )
+
+    async with Client(build_server(lambda: fake)) as client:
+        started = structured(await client.call_tool("zelinqa_start", {"conversation": "demo"}))
+        assert started["questions"][0]["text"] == DECISION_NORMALE["candidates"][0]["text"]
+        updated = structured(await client.call_tool(tool, {"conversation": "demo", **arguments}))
+        assert [question["text"] for question in updated["questions"]] == [
+            DECISION_NORMALE["candidates"][1]["text"]
+        ]
+        assert updated["turn_count"] == DECISION_NORMALE["turn_count"]
+        assert "dec_8b31" not in json.dumps(updated)
+
+        # Without a reply, the replacement question is redisplayed locally.
+        again = structured(
+            await client.call_tool("zelinqa_next_question", {"conversation": "demo"})
+        )
+        assert again["questions"] == updated["questions"]
+        assert len(fake.calls_to("next")) == 1
+
+        # The reply is attached to the replacement decision, not the earlier one.
+        await client.call_tool(
+            "zelinqa_next_question",
+            {"conversation": "demo", "choice_labels": ["Dans le mois"]},
+        )
+
+    turn = fake.calls_to("next")[-1].kwargs["previous_turn"].model_dump(exclude_none=True)
+    assert turn["decision_id"] == "dec_8b31"
+    assert turn["question_id"] == "q_delai"
+    assert turn["structured_answer"]["choice_ids"] == ["choice_1m"]
+
+
 async def test_adjust_rejects_missing_or_ambiguous_updates_before_api_call():
     fake = fixture_client()
     async with Client(build_server(lambda: fake)) as client:
